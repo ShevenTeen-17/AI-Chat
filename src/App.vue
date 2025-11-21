@@ -21,7 +21,7 @@
       </div>
     </div>
 
-    <!-- 输入区域：多行输入框 + 发送按钮 -->
+    <!-- 输入区域：3行输入框 + 发送按钮 -->
     <div class="input-container">
       <textarea
         v-model="inputContent" 
@@ -42,7 +42,7 @@ import { ref, nextTick } from 'vue';
 // 2. 定义响应式变量
 // - messages：存储所有对话消息（数组，每条消息是对象）
 const messages = ref([
-  // 初始欢迎消息（可选，让界面打开时有内容）
+  // 初始欢迎消息
   {
     id: 1,
     role: 'assistant',  // assistant=AI，user=用户
@@ -55,7 +55,7 @@ const inputContent = ref('');
 // - messageContainer：获取对话区域DOM元素，用于自动滚动到底部
 const messageContainer = ref(null);
 
-// 3. 工具函数：格式化时间（如 "2024-05-20 14:30:25"）
+// 3. 工具函数：格式化时间
 function formatTime(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');  // 月份从0开始，补0成2位
@@ -101,7 +101,7 @@ function handleSend() {
   setTimeout(() => {
     // 移除加载中消息（找到最后一条消息并替换）
     messages.value.pop();
-    // 模拟AI回复内容（可自定义，这里用固定句子+用户消息关键词）
+    // 模拟AI回复内容（后续可改为调用本地mock或接入其他AI接口，这里先用固定句子+用户消息关键词）
     const aiReply = {
       id: Date.now() + 2,
       role: 'assistant',
