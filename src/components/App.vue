@@ -2,43 +2,63 @@
   <!-- 整个对话框容器 -->
   <div class="chat-container">
     <!-- 对话标题 -->
-    <h1 class="chat-title">AI对话框（MVP版）</h1>
+    <h1 class="chat-title">AI对话框（测试版）</h1>
 
-    <!-- 对话区域：显示消息列表，支持滚动 -->
+    <!-- 1. 对话区域：添加状态反馈（error显示重试按钮，loading显示加载动画） -->
     <div class="chat-messages" ref="messageContainer">
-      <!-- 循环渲染每条消息 -->
       <div 
         v-for="msg in messages" 
-        :key="msg.id"  
+        :key="msg.id"
         :class="['message-item', msg.role === 'user' ? 'user-message' : 'ai-message']"
       >
-        <!-- 消息角色（用户/AI） -->
         <div class="message-role">{{ msg.role === 'user' ? '我' : 'AI' }}</div>
-        <!-- 消息内容 -->
-        <div class="message-content">{{ msg.content }}</div>
-        <!-- 消息时间戳 -->
+        <div class="message-content">
+          {{ msg.content }}
+          <!-- 加载中状态：显示小动画（简单CSS实现） -->
+          <span v-if="chatStore.messageStates[msg.id] === 'loading'" class="loading-spinner">
+            ⭕
+          </span>
+        </div>
+        <!-- 失败状态：显示重试按钮 -->
+        <div v-if="chatStore.messageStates[msg.id] === 'error'" class="retry-btn-container">
+          <button 
+            class="retry-btn" 
+            @click="handleRetry(msg)"
+          >
+            重试
+          </button>
+        </div>
         <div class="message-time">{{ msg.timestamp }}</div>
       </div>
     </div>
 
-    <!-- 输入区域：3行输入框 + 发送按钮 -->
+    <!-- 2. 输入区域：发送按钮根据全局状态禁用（loading时禁用） -->
     <div class="input-container">
       <textarea
-        v-model="inputContent" 
+        v-model="inputContent"
         class="input-textarea"
         placeholder="请输入消息..."
-        rows="3" 
-        @keydown.enter.prevent="handleSend"  
+        rows="3"
+        @keydown.enter.prevent="handleSend"
+        :disabled="chatStore.global.isSending"  
       ></textarea>
-      <button class="send-btn" @click="handleSend">发送</button>
+      <button 
+        class="send-btn" 
+        @click="handleSend"
+        :disabled="chatStore.global.isSending" 
+      >
+        <!-- 禁用时显示“发送中”，正常显示“发送” -->
+        {{ chatStore.global.isSending ? '发送中...' : '发送' }}
+      </button>
     </div>
   </div>
 </template>
 
 <script setup>
-// 1. 导入Vue核心API：ref用于定义响应式变量；导入mock文件：json文件用于生成ai回答
+// 1. 导入Vue核心API：ref用于定义响应式变量；导入mock文件：json文件用于生成ai回答;导入状态管理模块
 import { ref, nextTick } from 'vue';
-import mockData from './mock/ai-answers.json'
+import mockData from '../mock/ai-answers.json';
+import { chatStore, chatActions } from '../store/chatStore';
 
 // 2. 定义响应式变量
 // - messages：存储所有对话消息（数组，每条消息是对象）
@@ -86,11 +106,10 @@ function getMockAnswer(userInput) {
 
 // 4. 核心函数：发送消息（原有代码保留，只修改setTimeout内的逻辑）
 function handleSend() {
-  // 4.1 校验输入：为空则不发送（原有代码保留）
   const content = inputContent.value.trim();
-  if (!content) return;
+  if (!content || chatStore.global.isSending) return; // 若正在发送，禁止重复点击
 
-  // 4.2 添加用户消息到列表（原有代码保留）
+  // -------------------------- 1. 发送用户消息：设置状态为success --------------------------
   const userMsg = {
     id: Date.now(),
     role: 'user',
@@ -98,14 +117,9 @@ function handleSend() {
     timestamp: formatTime(new Date())
   };
   messages.value.push(userMsg);
+  chatActions.setMessageState(userMsg.id, 'success'); // 用户消息发送即成功
 
-  // 4.3 清空输入框（原有代码保留）
-  inputContent.value = '';
-
-  // 4.4 触发自动滚动到底部（原有代码保留）
-  scrollToBottom();
-
-  // 4.5 模拟AI加载状态（原有代码保留）
+  // -------------------------- 2. 发送AI加载消息：设置状态为loading --------------------------
   const loadingMsg = {
     id: Date.now() + 1,
     role: 'assistant',
@@ -113,24 +127,42 @@ function handleSend() {
     timestamp: formatTime(new Date())
   };
   messages.value.push(loadingMsg);
+  chatActions.setMessageState(loadingMsg.id, 'loading'); // AI加载中状态
+  chatActions.setIsSending(true); // 全局设为“正在发送”，禁用发送按钮
+
+  // 清空输入框+滚动到底部（原有逻辑保留）
+  inputContent.value = '';
   scrollToBottom();
 
-  // 4.6 模拟AI延迟回复：修改为从Mock文件获取答案（关键修改部分）
+  // -------------------------- 3. 模拟AI回复：根据结果更新状态 --------------------------
   setTimeout(() => {
-    // 移除加载中消息（原有代码保留）
+    // 移除加载消息
     messages.value.pop();
-    // 关键：调用getMockAnswer，传入用户消息content，获取匹配的AI答案
-    const aiAnswer = getMockAnswer(content);
-    // 组装AI回复消息（原有结构保留，只替换content为aiAnswer）
+    // 模拟回复结果（可故意加随机失败，测试error状态：Math.random() > 0.7 表示30%失败率）
+    const isReplySuccess = Math.random() > 0.3;
+    let aiContent = '';
+
+    if (isReplySuccess) {
+      // 成功：从Mock获取答案，状态设为success
+      aiContent = getMockAnswer(content);
+    } else {
+      // 失败：显示错误提示，状态设为error
+      aiContent = '抱歉，回复失败，请点击重试~';
+    }
+
+    // 添加AI回复消息，并设置对应状态
     const aiReply = {
       id: Date.now() + 2,
       role: 'assistant',
-      content: aiAnswer, // 不再是固定模板，而是Mock中的答案
+      content: aiContent,
       timestamp: formatTime(new Date())
     };
     messages.value.push(aiReply);
+    chatActions.setMessageState(aiReply.id, isReplySuccess ? 'success' : 'error');
+    chatActions.setIsSending(false); // 重置全局状态：发送完成
+
     scrollToBottom();
-  }, 2000); // 2秒延迟不变，模拟AI思考时间
+  }, 2000);
 }
 
 // 5. 辅助函数：自动滚动对话区域到底部
@@ -141,6 +173,28 @@ function scrollToBottom() {
       messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
     }
   });
+}
+// 6.重试函数：针对error状态的AI消息，重新请求回复
+function handleRetry(failedMsg) {
+  // 仅处理AI的error消息
+  if (failedMsg.role !== 'assistant' || chatStore.messageStates[failedMsg.id] !== 'error') return;
+
+  // 1. 先将该消息状态设为loading（显示加载动画）
+  chatActions.setMessageState(failedMsg.id, 'loading');
+  chatActions.setIsSending(true); // 全局设为发送中
+
+  // 2. 重新模拟AI回复（逻辑与handleSend一致，从Mock获取答案）
+  setTimeout(() => {
+    const isReplySuccess = Math.random() > 0.3; // 再次随机成功率
+    const newContent = isReplySuccess 
+      ? getMockAnswer(messages.value[messages.value.length - 2].content) // 获取上一条用户消息
+      : '抱歉，回复仍失败，请稍后再试~';
+
+    // 3. 更新消息内容和状态
+    failedMsg.content = newContent;
+    chatActions.setMessageState(failedMsg.id, isReplySuccess ? 'success' : 'error');
+    chatActions.setIsSending(false); // 重置全局状态
+  }, 1500);
 }
 </script>
 
@@ -263,5 +317,41 @@ function scrollToBottom() {
 /* 按钮 hover 效果：背景色加深 */
 .send-btn:hover {
   background-color: #3086d6;
+}
+/* 加载中动画（简单旋转效果） */
+.loading-spinner {
+  display: inline-block;
+  margin-left: 8px;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 重试按钮样式 */
+.retry-btn-container {
+  margin-top: 4px;
+  text-align: right;
+}
+.retry-btn {
+  background-color: #ff4d4f;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.retry-btn:hover {
+  background-color: #e03131;
+}
+
+/* 禁用状态的输入框/按钮样式（灰色，无点击效果） */
+.input-textarea:disabled, .send-btn:disabled {
+  background-color: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+  border-color: #e0e0e0;
 }
 </style>
