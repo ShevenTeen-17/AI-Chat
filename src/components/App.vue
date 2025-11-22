@@ -36,8 +36,9 @@
 </template>
 
 <script setup>
-// 1. 导入Vue核心API：ref用于定义响应式变量
+// 1. 导入Vue核心API：ref用于定义响应式变量；导入mock文件：json文件用于生成ai回答
 import { ref, nextTick } from 'vue';
+import mockData from './mock/ai-answers.json'
 
 // 2. 定义响应式变量
 // - messages：存储所有对话消息（数组，每条消息是对象）
@@ -58,7 +59,7 @@ const messageContainer = ref(null);
 // 3. 工具函数：格式化时间
 function formatTime(date) {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');  // 月份从0开始，补0成2位
+  const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   const hour = String(date.getHours()).padStart(2, '0');
   const minute = String(date.getMinutes()).padStart(2, '0');
@@ -66,51 +67,70 @@ function formatTime(date) {
   return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
 }
 
-// 4. 核心函数：发送消息
+// 新增：工具函数：根据用户消息匹配Mock中的AI答案
+function getMockAnswer(userInput) {
+  // 1. 遍历Mock文件中的所有“问题-答案”对
+  const matchedItem = mockData.mockAnswers.find(item => {
+    // 匹配规则：用户输入包含Mock中的“userQuestion”（不区分大小写，提高匹配灵活性）
+    return userInput.toLowerCase().includes(item.userQuestion.toLowerCase());
+  });
+  // 2. 有匹配的答案则返回，无匹配则返回“默认回复”
+  if (matchedItem) {
+    return matchedItem.aiAnswer;
+  } else {
+    // 从Mock中找“默认回复”（也可直接写固定文本，建议统一在Mock中管理）
+    const defaultAnswer = mockData.mockAnswers.find(item => item.userQuestion === "默认回复");
+    return defaultAnswer ? defaultAnswer.aiAnswer : "抱歉，暂无相关回复~";
+  }
+}
+
+// 4. 核心函数：发送消息（原有代码保留，只修改setTimeout内的逻辑）
 function handleSend() {
-  // 4.1 校验输入：为空则不发送
+  // 4.1 校验输入：为空则不发送（原有代码保留）
   const content = inputContent.value.trim();
   if (!content) return;
 
-  // 4.2 添加用户消息到列表
+  // 4.2 添加用户消息到列表（原有代码保留）
   const userMsg = {
-    id: Date.now(),  // 用当前时间戳作为唯一ID（简单高效）
+    id: Date.now(),
     role: 'user',
     content: content,
     timestamp: formatTime(new Date())
   };
   messages.value.push(userMsg);
 
-  // 4.3 清空输入框
+  // 4.3 清空输入框（原有代码保留）
   inputContent.value = '';
 
-  // 4.4 触发自动滚动到底部（nextTick确保DOM更新后再滚动）
+  // 4.4 触发自动滚动到底部（原有代码保留）
   scrollToBottom();
 
-  // 4.5 模拟AI加载状态：先添加"加载中"消息
+  // 4.5 模拟AI加载状态（原有代码保留）
   const loadingMsg = {
-    id: Date.now() + 1,  // ID比用户消息大1，避免重复
+    id: Date.now() + 1,
     role: 'assistant',
     content: 'AI正在思考...',
     timestamp: formatTime(new Date())
   };
   messages.value.push(loadingMsg);
-  scrollToBottom();  // 加载中消息也要滚动到底部
+  scrollToBottom();
 
-  // 4.6 模拟AI延迟回复（2秒后替换加载状态为真实回复）
+  // 4.6 模拟AI延迟回复：修改为从Mock文件获取答案（关键修改部分）
   setTimeout(() => {
-    // 移除加载中消息（找到最后一条消息并替换）
+    // 移除加载中消息（原有代码保留）
     messages.value.pop();
-    // 模拟AI回复内容（后续可改为调用本地mock或接入其他AI接口，这里先用固定句子+用户消息关键词）
+    // 关键：调用getMockAnswer，传入用户消息content，获取匹配的AI答案
+    const aiAnswer = getMockAnswer(content);
+    // 组装AI回复消息（原有结构保留，只替换content为aiAnswer）
     const aiReply = {
       id: Date.now() + 2,
       role: 'assistant',
-      content: `你刚才说："${content}"。这是我模拟的回复，MVP版暂不支持真实AI逻辑~`,
+      content: aiAnswer, // 不再是固定模板，而是Mock中的答案
       timestamp: formatTime(new Date())
     };
     messages.value.push(aiReply);
-    scrollToBottom();  // 回复消息滚动到底部
-  }, 2000);  // 2000毫秒=2秒延迟
+    scrollToBottom();
+  }, 2000); // 2秒延迟不变，模拟AI思考时间
 }
 
 // 5. 辅助函数：自动滚动对话区域到底部
