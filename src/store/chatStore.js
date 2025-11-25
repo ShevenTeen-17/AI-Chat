@@ -1,16 +1,34 @@
 // src/store/chatStore.js
 import { reactive } from 'vue';
 
-// 定义对话相关的所有状态（单条消息状态+全局状态）
-const chatStore = reactive({
-  // 1. 全局状态：控制输入框/发送按钮状态
-  global: {
-    isSending: false, // 是否正在发送（AI加载中时设为true，禁止重复发送）
-    currentSessionId: 'session_' + Date.now() // 当前会话ID（后续持久化用，初始值为时间戳）
+export const chatStore = reactive({
+  messages: [],
+  messageStates: {}, // 存储消息状态: loading/error
+  
+  // 添加消息
+  addMessage(message) {
+    this.messages.push(message);
+    this.saveToLocalStorage();
   },
-  // 2. 消息状态映射：key=消息ID，value=消息状态（loading/success/error）
-  messageStates: {}
+  
+  // 更新消息状态
+  updateMessageState(id, state) {
+    this.messageStates[id] = state;
+  },
+  
+  // 本地存储相关方法（后续扩展用）
+  saveToLocalStorage() {
+    localStorage.setItem('chatHistory', JSON.stringify(this.messages));
+  },
+  
+  loadFromLocalStorage() {
+    const saved = localStorage.getItem('chatHistory');
+    if (saved) {
+      this.messages = JSON.parse(saved);
+    }
+  }
 });
+
 
 // 定义操作状态的“方法”（修改状态需通过方法，避免直接修改）
 const chatActions = {
