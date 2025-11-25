@@ -13,6 +13,27 @@
       "aiAnswer": "聊天气泡可以用CSS的Flex布局控制位置（用户消息右对齐、AI消息左对齐），再用border-radius设置圆角，background-color区分背景色，就能做出基础的聊天气泡效果啦~"
     },
     {
+      "userQuestion": "分享文章",
+      "aiAnswer": {
+        "type": "card",
+        "subtype": "article",
+        "title": "Vue 组件化开发最佳实践",
+        "content": "本文介绍了Vue的核心原则和实战技巧...",
+        "url": "https://cn.vuejs.org/guide/essentials/application.html"
+      }
+    },
+    {
+      "userQuestion": "分享联系方式",
+      "aiAnswer": {
+        "type": "card",
+        "subtype": "contact",
+        "title": "技术支持",
+        "content": "十七 | 前端工程师",
+        "contact": "1370007548@qq.com",
+        "phone": "18943931599"
+      }
+    },
+    {
       "userQuestion": "默认回复",
       "aiAnswer": "抱歉，我暂时还没理解你的问题，你可以换个说法再问我~"
     }

@@ -6,13 +6,13 @@
       <div 
         v-for="msg in messages" 
         :key="msg.id"
-        :class="['message-item', msg.role === 'user' ? 'user-message' : 'ai-message']"
-      >
+        :class="['message-item', msg.role === 'user' ? 'user-message' : 'ai-message']">
         <div class="message-role">{{ msg.role === 'user' ? '我' : 'AI' }}</div>
         <ChatMessage 
-          :message="msg" 
-          :state="chatStore.messageStates[msg.id]" 
-        />
+    :message="msg" 
+    :state="chatStore.messageStates[msg.id]"
+    @card-click="handleCardClick"/>
+        
         <div v-if="chatStore.messageStates[msg.id] === 'error'" class="retry-btn-container">
           <button 
             class="retry-btn" 
@@ -92,18 +92,41 @@ function handleSend(content) {
       aiContent = '抱歉，回复失败，请点击重试~';
     }
 
-    const aiReply = {
-      id: Date.now() + 2,
-      role: 'assistant',
-      content: aiContent,
-      timestamp: formatTime(new Date())
-    };
+   const aiReply = {
+  id: Date.now() + 2,
+  role: 'assistant',
+  // 判断是否为卡片类型
+  type: typeof aiContent === 'object' && aiContent.type === 'card' ? 'card' : 'text',
+  content: aiContent, // 可能是字符串或卡片对象
+  timestamp: formatTime(new Date())
+};
     messages.value.push(aiReply);
     chatActions.setMessageState(aiReply.id, isReplySuccess ? 'success' : 'error');
     chatActions.setIsSending(false);
 
     scrollToBottom();
   }, 2000);
+}
+// 处理卡片点击事件
+const handleCardClick = (cardData) => {
+  switch (cardData.subtype) {
+    case 'article':
+      // 文章卡片：打开链接
+      if (cardData.url) {
+        window.open(cardData.url, '_blank');
+      }
+      break;
+    case 'contact':
+      // 联系方式卡片：复制邮箱
+      if (cardData.contact) {
+        navigator.clipboard.writeText(cardData.contact)
+          .then(() => alert('邮箱已复制到剪贴板'))
+          .catch(err => console.error('复制失败:', err));
+      }
+      break;
+    default:
+      console.log('未知卡片类型', cardData);
+  }
 }
 
 function handleRetry(failedMsg) {
@@ -119,6 +142,8 @@ function handleRetry(failedMsg) {
       : '抱歉，回复仍失败，请稍后再试~';
 
     failedMsg.content = newContent;
+// 补充：根据新内容类型更新 message.type
+failedMsg.type = typeof newContent === 'object' && newContent.type === 'card' ? 'card' : 'text';
     chatActions.setMessageState(failedMsg.id, isReplySuccess ? 'success' : 'error');
     chatActions.setIsSending(false);
   }, 1500);

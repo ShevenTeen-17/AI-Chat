@@ -1,10 +1,13 @@
 // src/store/chatStore.js
 import { reactive } from 'vue';
 
-export const chatStore = reactive({
+const chatStore = reactive({
   messages: [],
   messageStates: {}, // 存储消息状态: loading/error
-  
+   global: {
+    isSending: false,
+    currentSessionId: 'session_' + Date.now()
+  },
   // 添加消息
   addMessage(message) {
     this.messages.push(message);
@@ -33,9 +36,9 @@ export const chatStore = reactive({
 // 定义操作状态的“方法”（修改状态需通过方法，避免直接修改）
 const chatActions = {
   // 设置单条消息的状态（如AI加载时设为loading，回复成功设为success）
-  setMessageState(messageId, state) {
+ setMessageState(messageId, state) {
     if (!messageId || !['loading', 'success', 'error'].includes(state)) return;
-    chatStore.messageStates[messageId] = state;
+    chatStore.updateMessageState(messageId, state); // 调用内部方法
   },
   // 设置全局“是否正在发送”状态（AI加载时true，回复完成/失败时false）
   setIsSending(isSending) {
