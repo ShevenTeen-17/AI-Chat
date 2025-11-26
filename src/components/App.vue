@@ -39,6 +39,45 @@ import { getMockAnswer } from '../store/helpers';
 import { formatTime } from '../utils/formatter';
 import ChatMessage from './ChatMessage/index.vue';
 import InputArea from './InputArea.vue';
+import { marked } from 'marked';
+import hljs from 'highlight.js';
+
+// 流式响应处理
+function simulateStreaming(userInput, messageId) {
+  const fullAnswer = getMockAnswer(userInput);
+  const fullText = fullAnswer.raw;
+  let currentText = '';
+  let index = 0;
+
+  const updateMessage = () => {
+    const msgIndex = messages.value.findIndex(m => m.id === messageId);
+    if (msgIndex === -1) return;
+
+    if (index < fullText.length) {
+      currentText += fullText[index];
+      index++;
+      
+      // 实时解析 Markdown
+      const html = marked.parse(currentText, {
+        highlight: (code, lang) => {
+          if (lang && hljs.getLanguage(lang)) {
+            return hljs.highlight(code, { language: lang }).value;
+          }
+          return hljs.highlightAuto(code).value;
+        }
+      });
+
+      messages.value[msgIndex].content = { raw: currentText, html };
+      setTimeout(updateMessage, 30); // 控制打字速度
+    } else {
+      messages.value[msgIndex].state = 'success';
+      chatActions.setIsSending(false);
+      scrollToBottom();
+    }
+  };
+
+  updateMessage();
+}
 
 const messages = ref([
   {

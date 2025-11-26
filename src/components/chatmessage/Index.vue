@@ -1,15 +1,18 @@
 <template>
   <component 
     :is="componentType" 
-    v-bind="messageProps"
+    :content="message.content"
+    :state="state"
+    :title="message.title"
     @click="handleCardClick"
   />
 </template>
 
 <script setup>
-import {computed} from 'vue'
-import TextMessage from './TextMessage.vue'
-import CardMessage from './CardMessage.vue'
+import { computed } from 'vue';
+import TextMessage from './TextMessage.vue';
+import CardMessage from './CardMessage.vue';
+
 
 const props = defineProps({
   message: {
@@ -20,25 +23,9 @@ const props = defineProps({
     type: String,
     default: 'success'
   }
-})
+});
 
-const emits = defineEmits(['card-click'])
 
-// 计算需要传递的属性
-const messageProps = computed(() => {
-  // 如果是卡片类型消息，直接传递整个content对象
-  if (props.message.type === 'card') {
-    return {
-      ...props.message.content,
-      state: props.state
-    }
-  }
-  // 文本消息保持原有结构
-  return {
-    content: props.message.content,
-    state: props.state
-  }
-})
 
 // 确定要渲染的组件类型
 const componentType = computed(() => {
