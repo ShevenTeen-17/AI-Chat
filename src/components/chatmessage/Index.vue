@@ -3,6 +3,7 @@
     :is="componentType" 
     :content="message.content"
     :state="state"
+    :stream-progress="streamProgress"
     :title="message.title"
     @click="handleCardClick"
   />
@@ -22,10 +23,14 @@ const props = defineProps({
   state: {
     type: String,
     default: 'success'
+  },
+  streamProgress: {
+    type: Number,
+    default: 100
   }
 });
 
-
+const emits = defineEmits(['card-click']);
 
 // 确定要渲染的组件类型
 const componentType = computed(() => {

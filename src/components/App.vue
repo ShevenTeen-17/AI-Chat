@@ -11,7 +11,9 @@
         <ChatMessage 
     :message="msg" 
     :state="chatStore.messageStates[msg.id]"
-    @card-click="handleCardClick"/>
+    :stream-progress="streamProgress[msg.id] || 100" 
+    @card-click="handleCardClick"
+  />
         
         <div v-if="chatStore.messageStates[msg.id] === 'error'" class="retry-btn-container">
           <button 
@@ -39,46 +41,10 @@ import { getMockAnswer } from '../store/helpers';
 import { formatTime } from '../utils/formatter';
 import ChatMessage from './ChatMessage/index.vue';
 import InputArea from './InputArea.vue';
-import { marked } from 'marked';
-import hljs from 'highlight.js';
 
-// 流式响应处理
-function simulateStreaming(userInput, messageId) {
-  const fullAnswer = getMockAnswer(userInput);
-  const fullText = fullAnswer.raw;
-  let currentText = '';
-  let index = 0;
 
-  const updateMessage = () => {
-    const msgIndex = messages.value.findIndex(m => m.id === messageId);
-    if (msgIndex === -1) return;
-
-    if (index < fullText.length) {
-      currentText += fullText[index];
-      index++;
-      
-      // 实时解析 Markdown
-      const html = marked.parse(currentText, {
-        highlight: (code, lang) => {
-          if (lang && hljs.getLanguage(lang)) {
-            return hljs.highlight(code, { language: lang }).value;
-          }
-          return hljs.highlightAuto(code).value;
-        }
-      });
-
-      messages.value[msgIndex].content = { raw: currentText, html };
-      setTimeout(updateMessage, 30); // 控制打字速度
-    } else {
-      messages.value[msgIndex].state = 'success';
-      chatActions.setIsSending(false);
-      scrollToBottom();
-    }
-  };
-
-  updateMessage();
-}
-
+  // 添加流式渲染进度管理
+const streamProgress = ref({});
 const messages = ref([
   {
     id: 1,
@@ -120,31 +86,67 @@ function handleSend(content) {
 
   scrollToBottom();
 
-  setTimeout(() => {
-    messages.value.pop();
-    const isReplySuccess = Math.random() > 0.3;
-    let aiContent = '';
 
-    if (isReplySuccess) {
-      aiContent = getMockAnswer(content);
+// 修改handleSend方法中的定时器部分
+setTimeout(() => {
+  messages.value.pop();
+  const isReplySuccess = Math.random() > 0.3;
+  let aiContent = '';
+
+  if (isReplySuccess) {
+    const mockResult = getMockAnswer(content);
+    // 处理 getMockAnswer 返回的不同格式：
+    // 1. 卡片类型：{ type: 'card', ... } - 直接使用
+    // 2. 文本类型：{ raw: string, html: string } - 使用 raw 字段用于流式渲染
+    if (typeof mockResult === 'object' && mockResult !== null) {
+      if (mockResult.type === 'card') {
+        // 卡片类型，直接使用对象
+        aiContent = mockResult;
+      } else if (mockResult.raw) {
+        // 文本类型，使用 raw 字段（原始文本用于流式渲染）
+        aiContent = mockResult.raw;
+      } else {
+        // 兜底：如果格式不对，转换为字符串
+        aiContent = String(mockResult);
+      }
     } else {
-      aiContent = '抱歉，回复失败，请点击重试~';
+      // 如果返回的是字符串，直接使用
+      aiContent = mockResult;
     }
+  } else {
+    aiContent = '抱歉，回复失败，请点击重试~';
+  }
 
-   const aiReply = {
-  id: Date.now() + 2,
-  role: 'assistant',
-  // 判断是否为卡片类型
-  type: typeof aiContent === 'object' && aiContent.type === 'card' ? 'card' : 'text',
-  content: aiContent, // 可能是字符串或卡片对象
-  timestamp: formatTime(new Date())
-};
-    messages.value.push(aiReply);
-    chatActions.setMessageState(aiReply.id, isReplySuccess ? 'success' : 'error');
-    chatActions.setIsSending(false);
+  const aiReply = {
+    id: Date.now() + 2,
+    role: 'assistant',
+    type: typeof aiContent === 'object' && aiContent.type === 'card' ? 'card' : 'text',
+    content: aiContent,
+    timestamp: formatTime(new Date())
+  };
+  messages.value.push(aiReply);
+  
+  // 设置消息状态为 loading，以便触发流式渲染
+  chatActions.setMessageState(aiReply.id, 'loading');
+  
+  // 初始化流式进度
+  streamProgress.value[aiReply.id] = 0;
+  
+  // 启动流式动画
+  let progress = 0;
+  const interval = setInterval(() => {
+    progress += 2;
+    streamProgress.value[aiReply.id] = progress;
+    
+    if (progress >= 100) {
+      clearInterval(interval);
+      chatActions.setMessageState(aiReply.id, isReplySuccess ? 'success' : 'error');
+      chatActions.setIsSending(false);
+    }
+  }, 50);
 
-    scrollToBottom();
-  }, 2000);
+  scrollToBottom();
+}, 2000);
 }
 // 处理卡片点击事件
 const handleCardClick = (cardData) => {
