@@ -54,7 +54,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, onMounted, watch } from 'vue';
 import { chatStore, chatActions } from '../store/chatStore';
 import { getMockAnswer } from '../store/helpers';
 import { formatTime } from '../utils/formatter';
@@ -63,15 +63,15 @@ import InputArea from './InputArea.vue';
 
 
   // 添加流式渲染进度管理
+const STORAGE_KEY = 'chat_history_v1';
 const streamProgress = ref({});
-const messages = ref([
-  {
-    id: 1,
-    role: 'assistant',
-    content: '你好！我是AI助手，有什么可以帮你的？',
-    timestamp: formatTime(new Date())
-  }
-]);
+const defaultWelcomeMessage = () => ({
+  id: Date.now(),
+  role: 'assistant',
+  content: '你好！我是AI助手，有什么可以帮你的？',
+  timestamp: formatTime(new Date())
+});
+const messages = ref([defaultWelcomeMessage()]);
 
 const messageContainer = ref(null);
 
@@ -278,6 +278,69 @@ function handleRegenerate(message) {
     createAiStream(message, isReplySuccess);
   }, 1500);
 }
+
+function ensureDefaultMessage() {
+  if (!messages.value.length) {
+    const welcome = defaultWelcomeMessage();
+    messages.value.push(welcome);
+    chatActions.setMessageState(welcome.id, 'success');
+  }
+}
+
+function hydrateStreamProgress() {
+  messages.value.forEach(msg => {
+    if (msg.role === 'assistant') {
+      streamProgress.value[msg.id] = 100;
+      if (!chatStore.messageStates[msg.id]) {
+        chatActions.setMessageState(msg.id, 'success');
+      }
+    }
+  });
+}
+
+function persistHistory() {
+  try {
+    const payload = {
+      messages: messages.value,
+      messageStates: chatStore.messageStates
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  } catch (err) {
+    console.warn('保存对话历史失败', err);
+  }
+}
+
+function loadHistory() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed.messages) && parsed.messages.length) {
+        messages.value = parsed.messages;
+      }
+      if (parsed.messageStates && typeof parsed.messageStates === 'object') {
+        chatStore.messageStates = parsed.messageStates;
+      }
+    }
+  } catch (err) {
+    console.warn('加载对话历史失败', err);
+  } finally {
+    ensureDefaultMessage();
+    hydrateStreamProgress();
+  }
+}
+
+onMounted(() => {
+  loadHistory();
+});
+
+watch(
+  [messages, () => chatStore.messageStates],
+  () => {
+    persistHistory();
+  },
+  { deep: true }
+);
 </script>
 
 <style scoped>
