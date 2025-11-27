@@ -26,7 +26,7 @@ const props = defineProps({
   },
   subtype: {
     type: String,
-    required: true
+    default: ''
   },
   title: {
     type: String,
