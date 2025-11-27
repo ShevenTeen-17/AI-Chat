@@ -1,9 +1,9 @@
 <template>
-  <div class="message-content" v-html="renderedContent"></div>
+  <div class="message-content" ref="messageContent" v-html="renderedContent"></div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch, nextTick, onMounted } from 'vue';
 import { marked } from 'marked';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github.css'; // 选择喜欢的高亮样式
@@ -24,14 +24,18 @@ const props = defineProps({
   }
 });
 
-// 配置marked支持代码高亮
+// 配置 marked，启用 GFM 与换行，并利用 highlight.js 生成高亮 HTML
 marked.setOptions({
   highlight: (code, lang) => {
+    const codeStr = typeof code === 'string' ? code : String(code ?? '');
+
     if (lang && hljs.getLanguage(lang)) {
-      return hljs.highlight(code, { language: lang }).value;
+      return hljs.highlight(codeStr, { language: lang }).value;
     }
-    return hljs.highlightAuto(code).value;
+    return hljs.highlightAuto(codeStr).value;
   },
+  // 为 code 标签增加 .hljs class，保证主题样式生效
+  langPrefix: 'hljs language-',
   breaks: true,
   gfm: true
 });
@@ -47,6 +51,24 @@ const renderedContent = computed(() => {
     : contentStr;
   
   return marked.parse(displayContent) + (props.state === 'loading' && props.streamProgress < 100 ? '<span class="loading-spinner">⭕</span>' : '');
+});
+
+const messageContent = ref(null);
+
+const highlightBlocks = () => {
+  nextTick(() => {
+    if (!messageContent.value) return;
+    const blocks = messageContent.value.querySelectorAll('pre code');
+    blocks.forEach(block => {
+      hljs.highlightElement(block);
+    });
+  });
+};
+
+onMounted(highlightBlocks);
+
+watch(renderedContent, () => {
+  highlightBlocks();
 });
 </script>
 

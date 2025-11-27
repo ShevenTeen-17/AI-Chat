@@ -14,7 +14,26 @@
     :stream-progress="streamProgress[msg.id] || 100" 
     @card-click="handleCardClick"
   />
-        
+        <div 
+          v-if="msg.role === 'assistant'" 
+          class="message-actions"
+        >
+          <button 
+            class="action-btn" 
+            @click="handleCopy(msg)"
+            :disabled="chatStore.messageStates[msg.id] === 'loading'"
+          >
+            复制内容
+          </button>
+          <button 
+            class="action-btn"
+            @click="handleRegenerate(msg)"
+            :disabled="chatStore.messageStates[msg.id] === 'loading' || chatStore.global.isSending"
+          >
+            重新生成
+          </button>
+        </div>
+
         <div v-if="chatStore.messageStates[msg.id] === 'error'" class="retry-btn-container">
           <button 
             class="retry-btn" 
@@ -62,6 +81,44 @@ function scrollToBottom() {
       messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
     }
   });
+}
+
+function normalizeAiContent(mockResult) {
+  if (typeof mockResult === 'object' && mockResult !== null) {
+    if (mockResult.type === 'card') {
+      return mockResult;
+    }
+    if (mockResult.raw) {
+      return mockResult.raw;
+    }
+    return JSON.stringify(mockResult);
+  }
+  return typeof mockResult === 'string' ? mockResult : String(mockResult);
+}
+
+function createAiStream(aiMessage, isReplySuccess) {
+  streamProgress.value[aiMessage.id] = 0;
+  let progress = 0;
+  const interval = setInterval(() => {
+    progress += 2;
+    streamProgress.value[aiMessage.id] = progress;
+
+    if (progress >= 100) {
+      clearInterval(interval);
+      chatActions.setMessageState(aiMessage.id, isReplySuccess ? 'success' : 'error');
+      chatActions.setIsSending(false);
+    }
+  }, 50);
+}
+
+function getPreviousUserContent(targetMsgId) {
+  const idx = messages.value.findIndex(m => m.id === targetMsgId);
+  for (let i = idx - 1; i >= 0; i--) {
+    if (messages.value[i].role === 'user') {
+      return messages.value[i].content;
+    }
+  }
+  return '';
 }
 
 function handleSend(content) {
@@ -117,6 +174,12 @@ setTimeout(() => {
     aiContent = '抱歉，回复失败，请点击重试~';
   }
 
+  if (isReplySuccess) {
+    aiContent = normalizeAiContent(getMockAnswer(content));
+  } else {
+    aiContent = '抱歉，回复失败，请点击重试~';
+  }
+
   const aiReply = {
     id: Date.now() + 2,
     role: 'assistant',
@@ -129,21 +192,7 @@ setTimeout(() => {
   // 设置消息状态为 loading，以便触发流式渲染
   chatActions.setMessageState(aiReply.id, 'loading');
   
-  // 初始化流式进度
-  streamProgress.value[aiReply.id] = 0;
-  
-  // 启动流式动画
-  let progress = 0;
-  const interval = setInterval(() => {
-    progress += 2;
-    streamProgress.value[aiReply.id] = progress;
-    
-    if (progress >= 100) {
-      clearInterval(interval);
-      chatActions.setMessageState(aiReply.id, isReplySuccess ? 'success' : 'error');
-      chatActions.setIsSending(false);
-    }
-  }, 50);
+  createAiStream(aiReply, isReplySuccess);
 
   scrollToBottom();
 }, 2000);
@@ -178,15 +227,55 @@ function handleRetry(failedMsg) {
 
   setTimeout(() => {
     const isReplySuccess = Math.random() > 0.3;
+    const prompt = getPreviousUserContent(failedMsg.id);
     const newContent = isReplySuccess 
-      ? getMockAnswer(messages.value[messages.value.length - 2].content)
+      ? normalizeAiContent(getMockAnswer(prompt || ''))
       : '抱歉，回复仍失败，请稍后再试~';
 
     failedMsg.content = newContent;
-// 补充：根据新内容类型更新 message.type
-failedMsg.type = typeof newContent === 'object' && newContent.type === 'card' ? 'card' : 'text';
-    chatActions.setMessageState(failedMsg.id, isReplySuccess ? 'success' : 'error');
-    chatActions.setIsSending(false);
+    failedMsg.type = typeof newContent === 'object' && newContent.type === 'card' ? 'card' : 'text';
+    failedMsg.timestamp = formatTime(new Date());
+    createAiStream(failedMsg, isReplySuccess);
+  }, 1500);
+}
+
+function handleCopy(message) {
+  let textToCopy = '';
+  if (message.type === 'card' && typeof message.content === 'object') {
+    const { title, content, url, contact, phone } = message.content;
+    textToCopy = [title, content, url, contact, phone].filter(Boolean).join('\n');
+  } else if (typeof message.content === 'string') {
+    textToCopy = message.content;
+  } else {
+    textToCopy = JSON.stringify(message.content);
+  }
+
+  navigator.clipboard?.writeText(textToCopy).then(() => {
+    console.log('内容已复制');
+  }).catch(() => {
+    console.warn('复制失败');
+  });
+}
+
+function handleRegenerate(message) {
+  if (message.role !== 'assistant') return;
+  const prompt = getPreviousUserContent(message.id);
+  if (!prompt) return;
+
+  chatActions.setMessageState(message.id, 'loading');
+  chatActions.setIsSending(true);
+
+  setTimeout(() => {
+    const isReplySuccess = Math.random() > 0.3;
+    const newContent = isReplySuccess 
+      ? normalizeAiContent(getMockAnswer(prompt))
+      : '抱歉，回复失败，请稍后再试~';
+
+    message.content = newContent;
+    message.type = typeof newContent === 'object' && newContent.type === 'card' ? 'card' : 'text';
+    message.timestamp = formatTime(new Date());
+
+    createAiStream(message, isReplySuccess);
   }, 1500);
 }
 </script>
@@ -280,5 +369,31 @@ failedMsg.type = typeof newContent === 'object' && newContent.type === 'card' ? 
 
 .retry-btn:hover {
   background-color: #e03131;
+}
+
+.message-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.action-btn {
+  background-color: transparent;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #555;
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-btn:not(:disabled):hover {
+  border-color: #409eff;
+  color: #409eff;
 }
 </style>
