@@ -89,9 +89,46 @@ watch(renderedContent, () => {
   margin: 10px 0;
 }
 
-.message-content code {
-  font-family: 'Fira Code', monospace;
+/* 行内代码样式 - 使用更具体的选择器 */
+.message-content p code,
+.message-content li code,
+.message-content code:not(pre > code) {
+  background-color: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+  font-size: 0.9em;
+  color: #e83e8c;
+  display: inline;
+}
+
+/* 代码块内的代码 */
+.message-content pre code {
+  background-color: transparent !important;
+  padding: 0 !important;
+  font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
   font-size: 13px;
+  color: inherit;
+  display: block;
+}
+
+/* 斜体文本样式 */
+.message-content em {
+  font-style: italic;
+  color: inherit;
+}
+
+/* 加粗文本样式 */
+.message-content strong {
+  font-weight: bold;
+  color: inherit;
+}
+
+/* 加粗斜体文本 */
+.message-content strong em,
+.message-content em strong {
+  font-weight: bold;
+  font-style: italic;
 }
 
 .loading-spinner {

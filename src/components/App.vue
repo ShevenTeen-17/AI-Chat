@@ -12,48 +12,102 @@
       <h1 class="chat-title">AI对话框（测试版）</h1>
 
       <div class="chat-messages" ref="messageContainer">
-      <div 
-        v-for="msg in messages" 
-        :key="msg.id"
-        :class="['message-item', msg.role === 'user' ? 'user-message' : 'ai-message']">
-        <div class="message-role">{{ msg.role === 'user' ? '我' : 'AI' }}</div>
-        <ChatMessage 
-          :message="msg" 
-          :state="currentMessageStates[msg.id] || chatStore.messageStates[msg.id]"
-          :stream-progress="streamProgress[msg.id] || 100" 
-          @card-click="handleCardClick"
-        />
-        <div 
-          v-if="msg.role === 'assistant'" 
-          class="message-actions"
+        <!-- 当消息数量超过阈值时使用虚拟滚动 -->
+        <VirtualList
+          v-if="messages.length > VIRTUAL_SCROLL_THRESHOLD"
+          ref="virtualListRef"
+          :items="messages"
+          :item-height="150"
+          :overscan="10"
         >
-          <button 
-            class="action-btn" 
-            @click="handleCopy(msg)"
-            :disabled="(currentMessageStates[msg.id] || chatStore.messageStates[msg.id]) === 'loading'"
-          >
-            复制内容
-          </button>
-          <button 
-            class="action-btn"
-            @click="handleRegenerate(msg)"
-            :disabled="(currentMessageStates[msg.id] || chatStore.messageStates[msg.id]) === 'loading' || chatStore.global.isSending"
-          >
-            重新生成
-          </button>
-        </div>
+          <template #default="{ item: msg }">
+            <div 
+              :class="['message-item', msg.role === 'user' ? 'user-message' : 'ai-message']">
+              <div class="message-role">{{ msg.role === 'user' ? '我' : 'AI' }}</div>
+              <ChatMessage 
+                :message="msg" 
+                :state="currentMessageStates[msg.id] || chatStore.messageStates[msg.id]"
+                :stream-progress="streamProgress[msg.id] || 100" 
+                @card-click="handleCardClick"
+              />
+              <div 
+                v-if="msg.role === 'assistant'" 
+                class="message-actions"
+              >
+                <button 
+                  class="action-btn" 
+                  @click="handleCopy(msg)"
+                  :disabled="(currentMessageStates[msg.id] || chatStore.messageStates[msg.id]) === 'loading'"
+                >
+                  复制内容
+                </button>
+                <button 
+                  class="action-btn"
+                  @click="handleRegenerate(msg)"
+                  :disabled="(currentMessageStates[msg.id] || chatStore.messageStates[msg.id]) === 'loading' || chatStore.global.isSending"
+                >
+                  重新生成
+                </button>
+              </div>
 
-        <div v-if="(currentMessageStates[msg.id] || chatStore.messageStates[msg.id]) === 'error'" class="retry-btn-container">
-          <button 
-            class="retry-btn" 
-            @click="handleRetry(msg)"
-          >
-            重试
-          </button>
-        </div>
-        <div class="message-time">{{ msg.timestamp }}</div>
+              <div v-if="(currentMessageStates[msg.id] || chatStore.messageStates[msg.id]) === 'error'" class="retry-btn-container">
+                <button 
+                  class="retry-btn" 
+                  @click="handleRetry(msg)"
+                >
+                  重试
+                </button>
+              </div>
+              <div class="message-time">{{ msg.timestamp }}</div>
+            </div>
+          </template>
+        </VirtualList>
+        
+        <!-- 消息数量较少时使用普通渲染 -->
+        <template v-else>
+          <div 
+            v-for="msg in messages" 
+            :key="msg.id"
+            :class="['message-item', msg.role === 'user' ? 'user-message' : 'ai-message']">
+            <div class="message-role">{{ msg.role === 'user' ? '我' : 'AI' }}</div>
+            <ChatMessage 
+              :message="msg" 
+              :state="currentMessageStates[msg.id] || chatStore.messageStates[msg.id]"
+              :stream-progress="streamProgress[msg.id] || 100" 
+              @card-click="handleCardClick"
+            />
+            <div 
+              v-if="msg.role === 'assistant'" 
+              class="message-actions"
+            >
+              <button 
+                class="action-btn" 
+                @click="handleCopy(msg)"
+                :disabled="(currentMessageStates[msg.id] || chatStore.messageStates[msg.id]) === 'loading'"
+              >
+                复制内容
+              </button>
+              <button 
+                class="action-btn"
+                @click="handleRegenerate(msg)"
+                :disabled="(currentMessageStates[msg.id] || chatStore.messageStates[msg.id]) === 'loading' || chatStore.global.isSending"
+              >
+                重新生成
+              </button>
+            </div>
+
+            <div v-if="(currentMessageStates[msg.id] || chatStore.messageStates[msg.id]) === 'error'" class="retry-btn-container">
+              <button 
+                class="retry-btn" 
+                @click="handleRetry(msg)"
+              >
+                重试
+              </button>
+            </div>
+            <div class="message-time">{{ msg.timestamp }}</div>
+          </div>
+        </template>
       </div>
-    </div>
 
       <InputArea 
         :is-sending="chatStore.global.isSending"
@@ -71,11 +125,15 @@ import { formatTime } from '../utils/formatter';
 import ChatMessage from './ChatMessage/index.vue';
 import InputArea from './InputArea.vue';
 import Sidebar from './Sidebar.vue';
+import VirtualList from './VirtualList.vue';
 
 // 多会话存储键
 const STORAGE_KEY = 'chat_sessions_v2';
 const streamProgress = ref({});
 const sidebarCollapsed = ref(false);
+
+// 虚拟滚动阈值：当消息数量超过此值时启用虚拟滚动
+const VIRTUAL_SCROLL_THRESHOLD = 200;
 
 // 默认欢迎消息
 const defaultWelcomeMessage = () => ({
@@ -132,10 +190,15 @@ function updateCurrentSessionStates(newStates) {
 }
 
 const messageContainer = ref(null);
+const virtualListRef = ref(null);
 
 function scrollToBottom() {
   nextTick(() => {
-    if (messageContainer.value) {
+    // 如果使用虚拟滚动，调用虚拟滚动的方法
+    if (virtualListRef.value && messages.value.length > VIRTUAL_SCROLL_THRESHOLD) {
+      virtualListRef.value.scrollToBottom();
+    } else if (messageContainer.value) {
+      // 否则使用普通滚动
       messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
     }
   });
