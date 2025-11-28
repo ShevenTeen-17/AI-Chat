@@ -1,19 +1,28 @@
 <template>
-  <div class="chat-container">
-    <h1 class="chat-title">AI对话框（测试版）</h1>
+  <div class="app-wrapper">
+    <Sidebar
+      :sessions="sessions"
+      :current-session-id="currentSessionId"
+      @new-chat="handleNewChat"
+      @switch-session="handleSwitchSession"
+      @delete-session="handleDeleteSession"
+      @toggle="handleSidebarToggle"
+    />
+    <div class="chat-container" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
+      <h1 class="chat-title">AI对话框（测试版）</h1>
 
-    <div class="chat-messages" ref="messageContainer">
+      <div class="chat-messages" ref="messageContainer">
       <div 
         v-for="msg in messages" 
         :key="msg.id"
         :class="['message-item', msg.role === 'user' ? 'user-message' : 'ai-message']">
         <div class="message-role">{{ msg.role === 'user' ? '我' : 'AI' }}</div>
         <ChatMessage 
-    :message="msg" 
-    :state="chatStore.messageStates[msg.id]"
-    :stream-progress="streamProgress[msg.id] || 100" 
-    @card-click="handleCardClick"
-  />
+          :message="msg" 
+          :state="currentMessageStates[msg.id] || chatStore.messageStates[msg.id]"
+          :stream-progress="streamProgress[msg.id] || 100" 
+          @card-click="handleCardClick"
+        />
         <div 
           v-if="msg.role === 'assistant'" 
           class="message-actions"
@@ -21,20 +30,20 @@
           <button 
             class="action-btn" 
             @click="handleCopy(msg)"
-            :disabled="chatStore.messageStates[msg.id] === 'loading'"
+            :disabled="(currentMessageStates[msg.id] || chatStore.messageStates[msg.id]) === 'loading'"
           >
             复制内容
           </button>
           <button 
             class="action-btn"
             @click="handleRegenerate(msg)"
-            :disabled="chatStore.messageStates[msg.id] === 'loading' || chatStore.global.isSending"
+            :disabled="(currentMessageStates[msg.id] || chatStore.messageStates[msg.id]) === 'loading' || chatStore.global.isSending"
           >
             重新生成
           </button>
         </div>
 
-        <div v-if="chatStore.messageStates[msg.id] === 'error'" class="retry-btn-container">
+        <div v-if="(currentMessageStates[msg.id] || chatStore.messageStates[msg.id]) === 'error'" class="retry-btn-container">
           <button 
             class="retry-btn" 
             @click="handleRetry(msg)"
@@ -46,32 +55,81 @@
       </div>
     </div>
 
-    <InputArea 
-      :is-sending="chatStore.global.isSending"
-      @send="handleSend"
-    />
+      <InputArea 
+        :is-sending="chatStore.global.isSending"
+        @send="handleSend"
+      />
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted, watch } from 'vue';
+import { ref, nextTick, onMounted, watch, computed } from 'vue';
 import { chatStore, chatActions } from '../store/chatStore';
 import { getMockAnswer } from '../store/helpers';
 import { formatTime } from '../utils/formatter';
 import ChatMessage from './ChatMessage/index.vue';
 import InputArea from './InputArea.vue';
+import Sidebar from './Sidebar.vue';
 
-
-  // 添加流式渲染进度管理
-const STORAGE_KEY = 'chat_history_v1';
+// 多会话存储键
+const STORAGE_KEY = 'chat_sessions_v2';
 const streamProgress = ref({});
+const sidebarCollapsed = ref(false);
+
+// 默认欢迎消息
 const defaultWelcomeMessage = () => ({
   id: Date.now(),
   role: 'assistant',
   content: '你好！我是AI助手，有什么可以帮你的？',
   timestamp: formatTime(new Date())
 });
-const messages = ref([defaultWelcomeMessage()]);
+
+// 会话列表
+const sessions = ref([]);
+const currentSessionId = ref('');
+
+// 当前会话的消息
+const messages = computed(() => {
+  const session = sessions.value.find(s => s.id === currentSessionId.value);
+  return session ? session.messages : [];
+});
+
+// 当前会话的消息状态
+const currentMessageStates = computed(() => {
+  const session = sessions.value.find(s => s.id === currentSessionId.value);
+  return session ? session.messageStates : {};
+});
+
+// 更新当前会话的消息
+function updateCurrentSessionMessages(newMessages) {
+  const session = sessions.value.find(s => s.id === currentSessionId.value);
+  if (session) {
+    session.messages = newMessages;
+    session.updatedAt = formatTime(new Date());
+    updateSessionTitle(session);
+  }
+}
+
+// 更新会话标题（使用第一条用户消息）
+function updateSessionTitle(session) {
+  const firstUserMsg = session.messages.find(m => m.role === 'user');
+  if (firstUserMsg && typeof firstUserMsg.content === 'string') {
+    session.title = firstUserMsg.content.length > 20 
+      ? firstUserMsg.content.substring(0, 20) + '...' 
+      : firstUserMsg.content;
+  }
+}
+
+// 更新当前会话的消息状态
+function updateCurrentSessionStates(newStates) {
+  const session = sessions.value.find(s => s.id === currentSessionId.value);
+  if (session) {
+    session.messageStates = { ...newStates };
+    // 同时更新 chatStore 以便其他地方使用
+    Object.assign(chatStore.messageStates, newStates);
+  }
+}
 
 const messageContainer = ref(null);
 
@@ -105,17 +163,23 @@ function createAiStream(aiMessage, isReplySuccess) {
 
     if (progress >= 100) {
       clearInterval(interval);
-      chatActions.setMessageState(aiMessage.id, isReplySuccess ? 'success' : 'error');
+      const finalState = isReplySuccess ? 'success' : 'error';
+      const session = sessions.value.find(s => s.id === currentSessionId.value);
+      if (session) {
+        session.messageStates[aiMessage.id] = finalState;
+      }
+      chatActions.setMessageState(aiMessage.id, finalState);
       chatActions.setIsSending(false);
     }
   }, 50);
 }
 
 function getPreviousUserContent(targetMsgId) {
-  const idx = messages.value.findIndex(m => m.id === targetMsgId);
+  const currentMsgs = messages.value;
+  const idx = currentMsgs.findIndex(m => m.id === targetMsgId);
   for (let i = idx - 1; i >= 0; i--) {
-    if (messages.value[i].role === 'user') {
-      return messages.value[i].content;
+    if (currentMsgs[i].role === 'user') {
+      return currentMsgs[i].content;
     }
   }
   return '';
@@ -128,8 +192,14 @@ function handleSend(content) {
     content: content,
     timestamp: formatTime(new Date())
   };
-  messages.value.push(userMsg);
-  chatActions.setMessageState(userMsg.id, 'success');
+  const currentMessages = [...messages.value, userMsg];
+  updateCurrentSessionMessages(currentMessages);
+  // 更新消息状态到会话
+  const session = sessions.value.find(s => s.id === currentSessionId.value);
+  if (session) {
+    session.messageStates[userMsg.id] = 'success';
+    chatActions.setMessageState(userMsg.id, 'success');
+  }
 
   const loadingMsg = {
     id: Date.now() + 1,
@@ -137,16 +207,21 @@ function handleSend(content) {
     content: 'AI正在思考...',
     timestamp: formatTime(new Date())
   };
-  messages.value.push(loadingMsg);
-  chatActions.setMessageState(loadingMsg.id, 'loading');
+  const messagesWithLoading = [...currentMessages, loadingMsg];
+  updateCurrentSessionMessages(messagesWithLoading);
+  // 更新消息状态到会话（重用上面的 session 变量）
+  if (session) {
+    session.messageStates[loadingMsg.id] = 'loading';
+    chatActions.setMessageState(loadingMsg.id, 'loading');
+  }
   chatActions.setIsSending(true);
 
   scrollToBottom();
 
-
-// 修改handleSend方法中的定时器部分
-setTimeout(() => {
-  messages.value.pop();
+  // 修改handleSend方法中的定时器部分
+  setTimeout(() => {
+    const currentMsgs = messages.value.filter(m => m.id !== loadingMsg.id);
+    updateCurrentSessionMessages(currentMsgs);
   const isReplySuccess = Math.random() > 0.3;
   let aiContent = '';
 
@@ -180,22 +255,27 @@ setTimeout(() => {
     aiContent = '抱歉，回复失败，请点击重试~';
   }
 
-  const aiReply = {
-    id: Date.now() + 2,
-    role: 'assistant',
-    type: typeof aiContent === 'object' && aiContent.type === 'card' ? 'card' : 'text',
-    content: aiContent,
-    timestamp: formatTime(new Date())
-  };
-  messages.value.push(aiReply);
-  
-  // 设置消息状态为 loading，以便触发流式渲染
-  chatActions.setMessageState(aiReply.id, 'loading');
-  
-  createAiStream(aiReply, isReplySuccess);
+    const aiReply = {
+      id: Date.now() + 2,
+      role: 'assistant',
+      type: typeof aiContent === 'object' && aiContent.type === 'card' ? 'card' : 'text',
+      content: aiContent,
+      timestamp: formatTime(new Date())
+    };
+    const finalMessages = [...currentMsgs, aiReply];
+    updateCurrentSessionMessages(finalMessages);
+    
+    // 设置消息状态为 loading，以便触发流式渲染
+    const session = sessions.value.find(s => s.id === currentSessionId.value);
+    if (session) {
+      session.messageStates[aiReply.id] = 'loading';
+      chatActions.setMessageState(aiReply.id, 'loading');
+    }
+    
+    createAiStream(aiReply, isReplySuccess);
 
-  scrollToBottom();
-}, 2000);
+    scrollToBottom();
+  }, 2000);
 }
 // 处理卡片点击事件
 const handleCardClick = (cardData) => {
@@ -220,7 +300,8 @@ const handleCardClick = (cardData) => {
 }
 
 function handleRetry(failedMsg) {
-  if (failedMsg.role !== 'assistant' || chatStore.messageStates[failedMsg.id] !== 'error') return;
+  const msgState = currentMessageStates.value[failedMsg.id] || chatStore.messageStates[failedMsg.id];
+  if (failedMsg.role !== 'assistant' || msgState !== 'error') return;
 
   chatActions.setMessageState(failedMsg.id, 'loading');
   chatActions.setIsSending(true);
@@ -279,65 +360,144 @@ function handleRegenerate(message) {
   }, 1500);
 }
 
+// 会话管理函数
+function createNewSession() {
+  const newSessionId = 'session_' + Date.now();
+  const welcome = defaultWelcomeMessage();
+  const newSession = {
+    id: newSessionId,
+    title: '新对话',
+    messages: [welcome],
+    messageStates: { [welcome.id]: 'success' },
+    createdAt: formatTime(new Date()),
+    updatedAt: formatTime(new Date())
+  };
+  sessions.value.unshift(newSession);
+  currentSessionId.value = newSessionId;
+  chatActions.resetSession(newSessionId);
+  hydrateStreamProgress();
+  scrollToBottom();
+}
+
+function handleNewChat() {
+  createNewSession();
+}
+
+function handleSwitchSession(sessionId) {
+  if (sessionId === currentSessionId.value) return;
+  currentSessionId.value = sessionId;
+  const session = sessions.value.find(s => s.id === sessionId);
+  if (session) {
+    // 恢复会话的消息状态到 chatStore
+    chatStore.messageStates = { ...session.messageStates };
+  }
+  chatActions.resetSession(sessionId);
+  hydrateStreamProgress();
+  scrollToBottom();
+}
+
+function handleDeleteSession(sessionId) {
+  const index = sessions.value.findIndex(s => s.id === sessionId);
+  if (index === -1) return;
+  
+  sessions.value.splice(index, 1);
+  
+  // 如果删除的是当前会话，切换到其他会话或创建新会话
+  if (sessionId === currentSessionId.value) {
+    if (sessions.value.length > 0) {
+      currentSessionId.value = sessions.value[0].id;
+      chatActions.resetSession(sessions.value[0].id);
+    } else {
+      createNewSession();
+    }
+  }
+  hydrateStreamProgress();
+}
+
+function handleSidebarToggle(collapsed) {
+  sidebarCollapsed.value = collapsed;
+}
+
 function ensureDefaultMessage() {
-  if (!messages.value.length) {
+  const currentMsgs = messages.value;
+  if (!currentMsgs.length) {
     const welcome = defaultWelcomeMessage();
-    messages.value.push(welcome);
+    updateCurrentSessionMessages([welcome]);
     chatActions.setMessageState(welcome.id, 'success');
   }
 }
 
 function hydrateStreamProgress() {
-  messages.value.forEach(msg => {
+  const currentMsgs = messages.value;
+  currentMsgs.forEach(msg => {
     if (msg.role === 'assistant') {
       streamProgress.value[msg.id] = 100;
-      if (!chatStore.messageStates[msg.id]) {
+      const states = currentMessageStates.value;
+      if (!states[msg.id]) {
         chatActions.setMessageState(msg.id, 'success');
       }
     }
   });
 }
 
-function persistHistory() {
+// 持久化函数
+function persistSessions() {
   try {
-    const payload = {
-      messages: messages.value,
-      messageStates: chatStore.messageStates
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      sessions: sessions.value,
+      currentSessionId: currentSessionId.value
+    }));
   } catch (err) {
-    console.warn('保存对话历史失败', err);
+    console.warn('保存会话失败', err);
   }
 }
 
-function loadHistory() {
+function loadSessions() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed.messages) && parsed.messages.length) {
-        messages.value = parsed.messages;
-      }
-      if (parsed.messageStates && typeof parsed.messageStates === 'object') {
-        chatStore.messageStates = parsed.messageStates;
+      if (Array.isArray(parsed.sessions) && parsed.sessions.length) {
+        sessions.value = parsed.sessions;
+        currentSessionId.value = parsed.currentSessionId || parsed.sessions[0]?.id || '';
       }
     }
   } catch (err) {
-    console.warn('加载对话历史失败', err);
+    console.warn('加载会话失败', err);
   } finally {
-    ensureDefaultMessage();
-    hydrateStreamProgress();
+    // 如果没有会话，创建默认会话
+    if (sessions.value.length === 0) {
+      createNewSession();
+    } else {
+      // 确保当前会话ID有效
+      if (!currentSessionId.value || !sessions.value.find(s => s.id === currentSessionId.value)) {
+        currentSessionId.value = sessions.value[0].id;
+      }
+      chatActions.resetSession(currentSessionId.value);
+      ensureDefaultMessage();
+      hydrateStreamProgress();
+    }
   }
 }
 
 onMounted(() => {
-  loadHistory();
+  loadSessions();
 });
 
+// 监听会话变化并持久化
 watch(
-  [messages, () => chatStore.messageStates],
+  [sessions, currentSessionId],
   () => {
-    persistHistory();
+    persistSessions();
+  },
+  { deep: true }
+);
+
+// 监听消息状态变化并更新到会话
+watch(
+  () => chatStore.messageStates,
+  (newStates) => {
+    updateCurrentSessionStates(newStates);
   },
   { deep: true }
 );
@@ -351,10 +511,26 @@ watch(
   font-family: 'Arial', sans-serif;
 }
 
+.app-wrapper {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
 .chat-container {
-  max-width: 800px;
-  margin: 20px auto;
-  padding: 0 20px;
+  flex: 1;
+  margin-left: 280px;
+  display: flex;
+  flex-direction: column;
+  max-width: calc(100% - 280px);
+  padding: 20px;
+  overflow: hidden;
+  transition: margin-left 0.3s ease, max-width 0.3s ease;
+}
+
+.chat-container.sidebar-collapsed {
+  margin-left: 60px;
+  max-width: calc(100% - 60px);
 }
 
 .chat-title {
@@ -364,7 +540,7 @@ watch(
 }
 
 .chat-messages {
-  height: 500px;
+  flex: 1;
   overflow-y: auto;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
