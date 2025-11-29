@@ -1,5 +1,6 @@
 <template>
   <div class="app-wrapper">
+    <button class="theme-toggle" @click="toggleTheme" :title="theme === 'dark' ? '切换到白天模式' : '切换到夜间模式'">{{ theme === 'dark' ? '🌙' : '☀️' }}</button>
     <Sidebar
       :sessions="sessions"
       :current-session-id="currentSessionId"
@@ -9,7 +10,10 @@
       @toggle="handleSidebarToggle"
     />
     <div class="chat-container" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
-      <h1 class="chat-title">AI对话框（测试版）</h1>
+      <header class="chat-header">
+        <div class="chat-title">AI 对话</div>
+        <div class="chat-subtitle">轻量、私有、可扩展的聊天演示</div>
+      </header>
 
       <div class="chat-messages" ref="messageContainer">
         <!-- 当消息数量超过阈值时使用虚拟滚动 -->
@@ -115,6 +119,27 @@ const imageInput = ref(null);
 const showContextSelector = ref(false);
 const selectedContextIds = ref([]);
 const contextSelectorRef = ref(null);
+
+// 主题支持
+const theme = ref('light');
+const THEME_KEY = 'chat_theme';
+function applyTheme(t) {
+  const isDark = t === 'dark';
+  if (isDark) {
+    document.documentElement.classList.add('theme-dark');
+  } else {
+    document.documentElement.classList.remove('theme-dark');
+  }
+}
+function toggleTheme() {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark';
+  try {
+    localStorage.setItem(THEME_KEY, theme.value);
+  } catch (e) {
+    console.warn('无法保存主题偏好:', e);
+  }
+  applyTheme(theme.value);
+}
 
 // 会话管理
 const {
@@ -296,6 +321,16 @@ onMounted(() => {
   loadSessions();
   ensureDefaultMessage();
   hydrateStreamProgress();
+  // 初始化主题
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved === 'dark' || saved === 'light') {
+      theme.value = saved;
+    }
+  } catch (e) {
+    console.warn('读取主题偏好失败', e);
+  }
+  applyTheme(theme.value);
 });
 </script>
 
@@ -332,81 +367,112 @@ onMounted(() => {
 }
 
 .chat-title {
-  text-align: center;
-  color: #333;
-  margin-bottom: 20px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.chat-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.chat-subtitle {
+  font-size: 12px;
+  color: var(--muted);
+  opacity: 0.9;
 }
 
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 15px;
-  background-color: #fafafa;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 14px;
+  background: var(--card-bg);
+  box-shadow: 0 6px 18px var(--shadow);
 }
 
 /* 上下文选择器样式 */
 .context-selector-container {
-  margin-bottom: 10px;
-  max-height: 200px;
-  overflow: hidden;
+  margin-bottom: 12px;
+  max-height: 220px;
+  background: var(--card-bg);
+  border-radius: 10px;
+  padding: 8px;
+  box-shadow: 0 4px 12px var(--shadow);
+  overflow: auto;
 }
 
 .input-actions {
   display: flex;
   gap: 10px;
+  align-items: center;
 }
 
 /* 上下文按钮样式 */
 .context-btn {
-  width: 120px;
-  background-color: #c540dd;
-  color: white;
+  min-width: 110px;
+  padding: 10px 12px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  color: var(--on-primary);
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   font-size: 14px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 6px 14px var(--shadow);
 }
 
 .context-btn:hover {
-  background-color: #ba6ddb;
+  opacity: 0.95;
 }
 
 .context-btn:disabled {
-  background-color: #d09bd9;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
 .image-upload-btn {
-  width: 100px;
-  background-color: #79c951ff;
-  color: white;
+  min-width: 100px;
+  padding: 10px 12px;
+  background: linear-gradient(90deg, var(--success), var(--success-2));
+  color: var(--on-primary);
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   font-size: 14px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 6px;
+  box-shadow: 0 6px 14px var(--shadow);
 }
 
 .image-upload-btn:hover {
-  background-color: #52b326;
+  opacity: 0.95;
 }
 
 .image-upload-btn:disabled {
-  background-color: #a9d98f;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
 .image-input {
   display: none;
+}
+
+/* small screens */
+@media (max-width: 800px) {
+  .chat-container { margin-left: 60px; padding: 12px; }
+  .chat-messages { padding: 12px; }
+  .context-btn, .image-upload-btn { min-width: 90px; padding: 8px 10px; }
 }
 
 </style>

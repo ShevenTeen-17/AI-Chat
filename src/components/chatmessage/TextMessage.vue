@@ -78,11 +78,12 @@ watch(renderedContent, () => {
   line-height: 1.5;
   font-size: 14px;
   word-wrap: break-word;
+  color: var(--text);
 }
 
 /* 代码块样式 */
 .message-content pre {
-  background-color: #f5f5f5;
+  background-color: var(--panel-bg);
   padding: 12px;
   border-radius: 6px;
   overflow-x: auto;
@@ -93,12 +94,12 @@ watch(renderedContent, () => {
 .message-content p code,
 .message-content li code,
 .message-content code:not(pre > code) {
-  background-color: #f5f5f5;
+  background-color: var(--panel-bg);
   padding: 2px 6px;
   border-radius: 3px;
   font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
   font-size: 0.9em;
-  color: #e83e8c;
+  color: var(--accent);
   display: inline;
 }
 

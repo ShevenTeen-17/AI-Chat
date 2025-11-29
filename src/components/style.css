@@ -8,19 +8,6 @@
   --card-bg: #ffffff;
   --button-bg: #f9f9f9;
   --shadow: rgba(18, 38, 63, 0.06);
-  --link: #646cff;
-  --link-hover: #535bf2;
-  --muted-border: rgba(0,0,0,0.08);
-  --success: #4fb24f;
-  --success-2: #78d24f;
-  --inset: rgba(255,255,255,0.06);
-  --overlay: rgba(0,0,0,0.5);
-  --overlay-light: rgba(255,255,255,0.7);
-  --on-primary: #ffffff;
-  --danger: #ff4d4f;
-  --danger-dark: #e03131;
-  --primary-opaque: rgba(100,108,255,0.08);
-  --contact-opaque: rgba(254,243,199,0.9);
 
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -82,7 +69,7 @@ button {
   font-family: inherit;
   background-color: var(--button-bg);
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: border-color 0.25s, background-color 0.2s;
 }
 button:hover {
   border-color: var(--link);
@@ -94,6 +81,7 @@ button:focus-visible {
 
 .card {
   padding: 2em;
+  background: var(--card-bg);
 }
 
 #app {
@@ -117,12 +105,12 @@ button:focus-visible {
   }
 }
 
-/* Theme toggle button (global) */
+/* Theme toggle button */
 .theme-toggle {
   position: fixed;
   right: 18px;
   bottom: 18px;
-  z-index: 9999;
+  z-index: 1200;
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -130,25 +118,16 @@ button:focus-visible {
   align-items: center;
   justify-content: center;
   background: linear-gradient(180deg, var(--primary), var(--accent));
-  color: #fff;
-  box-shadow: 0 12px 30px rgba(11, 38, 80, 0.12);
+  color: var(--on-primary);
+  box-shadow: 0 8px 24px var(--shadow);
   border: none;
   cursor: pointer;
   font-size: 18px;
 }
-.theme-toggle:hover { transform: translateY(-2px); }
+.theme-toggle:hover {
+  transform: translateY(-2px);
+}
 
 @media (max-width: 800px) {
   .theme-toggle { right: 12px; bottom: 12px; width: 40px; height: 40px; }
-}
-
-/* Ensure main chat messages area follows theme variables (override scoped styles if needed) */
-.chat-messages {
-  background: var(--card-bg) !important;
-  box-shadow: 0 6px 18px var(--shadow) !important;
-}
-
-/* Also ensure chat container text colors follow theme */
-.chat-container, .chat-container * {
-  color: var(--text) !important;
 }

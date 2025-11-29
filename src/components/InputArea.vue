@@ -9,7 +9,18 @@
         @keydown.enter.prevent="handleSend"
         :disabled="isSending"  
       ></textarea>
-    
+      <!-- 图片上传区域 -->
+      <div class="image-upload-area">
+        <input 
+          type="file" 
+          id="image-upload" 
+          accept="image/*" 
+          @change="handleImageUpload"
+          class="image-upload-input"
+          :disabled="isSending"
+        >
+        
+      </div>
     </div>
     <button 
       class="send-btn" 
@@ -100,11 +111,39 @@ const handleSend = () => {
 
 <style scoped>
 
+.input-container {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex: 1;
+}
+
 .input-wrapper {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.input-textarea {
+  width: 100%;
+  min-height: 44px;
+  max-height: 140px;
+  resize: vertical;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--muted-border);
+  background: var(--card-bg);
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text);
+  box-shadow: inset 0 1px 0 var(--inset);
+}
+
+.input-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 6px 18px var(--shadow);
 }
 
 .image-upload-area {
@@ -119,7 +158,7 @@ const handleSend = () => {
 
 .upload-btn {
   padding: 4px 10px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--muted-border);
   border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
@@ -151,7 +190,7 @@ const handleSend = () => {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background-color: rgba(0,0,0,0.5);
+  background-color: var(--overlay);
   color: white;
   border: none;
   cursor: pointer;
@@ -160,5 +199,28 @@ const handleSend = () => {
   justify-content: center;
   font-size: 12px;
   line-height: 1;
+}
+
+.send-btn {
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  color: var(--on-primary);
+  border: none;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  min-width: 84px;
+  box-shadow: 0 8px 20px var(--shadow);
+  font-weight: 600;
+}
+
+.send-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+@media (max-width: 800px) {
+  .input-container { gap: 8px; }
+  .send-btn { padding: 8px 10px; min-width: 72px; }
 }
 </style>

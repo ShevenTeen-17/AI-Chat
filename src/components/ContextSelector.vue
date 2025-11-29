@@ -96,23 +96,24 @@ defineExpose({
 
 <style scoped>
 .context-selector {
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--shadow);
   border-radius: 8px;
   margin-bottom: 10px;
+  background: var(--card-bg);
 }
 
 .selector-header {
   display: flex;
   justify-content: space-between;
   padding: 8px 15px;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #e0e0e0;
+  background-color: var(--panel-bg);
+  border-bottom: 1px solid var(--shadow);
 }
 
 .selector-header button {
   background: none;
   border: none;
-  color: #409eff;
+  color: var(--primary);
   cursor: pointer;
   font-size: 12px;
 }
@@ -132,13 +133,13 @@ defineExpose({
 }
 
 .message-item.selected {
-  background-color: #e8f4fd;
-  border: 1px solid #409eff;
+  background-color: var(--primary-opaque);
+  border: 1px solid var(--primary);
 }
 
 .message-role {
   font-size: 12px;
-  color: #666;
+  color: var(--muted);
   margin-bottom: 2px;
 }
 

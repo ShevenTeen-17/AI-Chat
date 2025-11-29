@@ -80,8 +80,8 @@ defineEmits(['card-click', 'copy', 'regenerate', 'retry']);
 
 .user-message .message-content,
 .user-message .card-message {
-  background-color: #409eff;
-  color: white;
+  background-color: var(--primary);
+  color: var(--on-primary);
   border-radius: 16px 16px 4px 16px;
 }
 
@@ -91,20 +91,20 @@ defineEmits(['card-click', 'copy', 'regenerate', 'retry']);
 
 .ai-message .message-content,
 .ai-message .card-message {
-  background-color: #e0e0e0;
-  color: #333;
+  background-color: var(--card-bg);
+  color: var(--text);
   border-radius: 16px 16px 16px 4px;
 }
 
 .message-role {
   font-size: 12px;
-  color: #666;
+  color: var(--muted);
   margin-bottom: 4px;
 }
 
 .message-time {
   font-size: 10px;
-  color: #999;
+  color: var(--muted);
   margin-top: 4px;
   text-align: right;
 }
@@ -115,8 +115,8 @@ defineEmits(['card-click', 'copy', 'regenerate', 'retry']);
 }
 
 .retry-btn {
-  background-color: #ff4d4f;
-  color: white;
+  background-color: var(--danger);
+  color: var(--on-primary);
   border: none;
   border-radius: 4px;
   padding: 2px 8px;
@@ -125,7 +125,7 @@ defineEmits(['card-click', 'copy', 'regenerate', 'retry']);
 }
 
 .retry-btn:hover {
-  background-color: #e03131;
+  background-color: var(--danger-dark);
 }
 
 .message-actions {
@@ -136,12 +136,12 @@ defineEmits(['card-click', 'copy', 'regenerate', 'retry']);
 
 .action-btn {
   background-color: transparent;
-  border: 1px solid #ccc;
+  border: 1px solid var(--muted-border);
   border-radius: 12px;
   padding: 2px 10px;
   font-size: 12px;
   cursor: pointer;
-  color: #555;
+  color: var(--muted);
 }
 
 .action-btn:disabled {
@@ -150,8 +150,8 @@ defineEmits(['card-click', 'copy', 'regenerate', 'retry']);
 }
 
 .action-btn:not(:disabled):hover {
-  border-color: #409eff;
-  color: #409eff;
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 /* 在现有样式基础上添加 */
@@ -161,12 +161,12 @@ defineEmits(['card-click', 'copy', 'regenerate', 'retry']);
 
 .user-message .image-message-container {
   border-radius: 16px 16px 4px 16px;
-  background-color: #409eff;
+  background-color: var(--primary);
 }
 
 .ai-message .image-message-container {
   border-radius: 16px 16px 16px 4px;
-  background-color: #e0e0e0;
+  background-color: var(--card-bg);
 }
 
 /* 新增图片消息样式 */
@@ -174,13 +174,13 @@ defineEmits(['card-click', 'copy', 'regenerate', 'retry']);
   padding: 8px;
 }
 
-.user-message .image-message-container {
-  background-color: #409eff;
+user-message .image-message-container {
+  background-color: var(--primary);
   border-radius: 16px 16px 4px 16px;
 }
 
-.ai-message .image-message-container {
-  background-color: #e0e0e0;
+ai-message .image-message-container {
+  background-color: var(--card-bg);
   border-radius: 16px 16px 16px 4px;
 }
 

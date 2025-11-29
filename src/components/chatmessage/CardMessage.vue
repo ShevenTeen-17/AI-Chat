@@ -57,7 +57,8 @@ const props = defineProps({
 <style scoped>
 .card-message {
   border-radius: 8px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--shadow);
+  background: var(--card-bg);
   overflow: hidden;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
@@ -65,12 +66,12 @@ const props = defineProps({
 
 .card-message:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 6px 18px var(--shadow);
 }
 
 .card-header {
   padding: 8px 15px;
-  background-color: #f5f5f5;
+  background-color: var(--panel-bg);
   font-size: 13px;
   font-weight: 500;
   display: flex;
@@ -82,20 +83,21 @@ const props = defineProps({
   padding: 10px 15px;
   font-size: 14px;
   line-height: 1.5;
+  color: var(--text);
 }
 
 .contact-info {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px dashed #eee;
+  border-top: 1px dashed var(--shadow);
   font-size: 13px;
 }
 
 .article .card-header {
-  background-color: #e8f4fd;
+  background-color: var(--primary-opaque);
 }
 
 .contact .card-header {
-  background-color: #fef3c7;
+  background-color: var(--contact-opaque);
 }
 </style>

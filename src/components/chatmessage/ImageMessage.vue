@@ -68,14 +68,14 @@ const handleImageLoad = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(255,255,255,0.7);
+  background-color: var(--overlay-light);
 }
 
 .spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #409eff;
+  border: 4px solid var(--muted-border);
+  border-top: 4px solid var(--primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }

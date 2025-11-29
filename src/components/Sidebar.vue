@@ -77,8 +77,8 @@ function handleDeleteSession(sessionId) {
 .sidebar {
   width: 280px;
   height: 100vh;
-  background-color: #f5f5f5;
-  border-right: 1px solid #e0e0e0;
+  background-color: var(--panel-bg);
+  border-right: 1px solid var(--shadow);
   display: flex;
   flex-direction: column;
   transition: width 0.3s ease;
@@ -96,8 +96,8 @@ function handleDeleteSession(sessionId) {
   padding: 15px;
   display: flex;
   gap: 10px;
-  border-bottom: 1px solid #e0e0e0;
-  background-color: white;
+  border-bottom: 1px solid var(--shadow);
+  background-color: var(--card-bg);
 }
 
 .new-chat-btn {
@@ -107,8 +107,8 @@ function handleDeleteSession(sessionId) {
   justify-content: center;
   gap: 8px;
   padding: 10px;
-  background-color: #409eff;
-  color: white;
+  background-color: var(--primary);
+  color: var(--on-primary);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -117,7 +117,7 @@ function handleDeleteSession(sessionId) {
 }
 
 .new-chat-btn:hover {
-  background-color: #3086d6;
+  background-color: var(--primary);
 }
 
 .new-chat-btn .icon {
@@ -131,20 +131,20 @@ function handleDeleteSession(sessionId) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f5f5f5;
-  border: 1px solid #e0e0e0;
+  background-color: var(--card-bg);
+  border: 1px solid var(--shadow);
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
 .toggle-btn:hover {
-  background-color: #e0e0e0;
+  background-color: var(--panel-bg);
 }
 
 .toggle-btn .icon {
   font-size: 16px;
-  color: #666;
+  color: var(--muted);
 }
 
 .sidebar-content {
@@ -164,21 +164,21 @@ function handleDeleteSession(sessionId) {
   align-items: center;
   justify-content: space-between;
   padding: 12px;
-  background-color: white;
-  border: 1px solid #e0e0e0;
+  background-color: var(--card-bg);
+  border: 1px solid var(--shadow);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .session-item:hover {
-  background-color: #f9f9f9;
-  border-color: #409eff;
+  background-color: var(--panel-bg);
+  border-color: var(--primary);
 }
 
 .session-item.active {
-  background-color: #e8f4fd;
-  border-color: #409eff;
+  background-color: var(--primary-opaque);
+  border-color: var(--primary);
 }
 
 .session-info {
@@ -189,7 +189,7 @@ function handleDeleteSession(sessionId) {
 .session-title {
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: var(--text);
   margin-bottom: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -198,7 +198,7 @@ function handleDeleteSession(sessionId) {
 
 .session-time {
   font-size: 12px;
-  color: #999;
+  color: var(--muted);
 }
 
 .delete-btn {
@@ -212,14 +212,14 @@ function handleDeleteSession(sessionId) {
   border-radius: 4px;
   cursor: pointer;
   font-size: 20px;
-  color: #999;
+  color: var(--muted);
   transition: all 0.2s;
   flex-shrink: 0;
 }
 
 .delete-btn:hover {
-  background-color: #ff4d4f;
-  color: white;
+  background-color: var(--danger);
+  color: var(--on-primary);
 }
 
 .sidebar-collapsed .new-chat-btn .text,
