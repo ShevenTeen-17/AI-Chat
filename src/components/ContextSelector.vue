@@ -20,14 +20,20 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 const props = defineProps({
   messages: {
     type: Array,
     required: true
+  },
+  selected: {
+    type: Array,
+    default: () => []
   }
 });
+
+const emit = defineEmits(['update:selected']);
 
 const selectedIds = ref([]);
 
@@ -50,6 +56,7 @@ const toggleSelection = (id) => {
   } else {
     selectedIds.value.push(id);
   }
+  emit('update:selected', [...selectedIds.value]);
 };
 
 const toggleSelectAll = () => {
@@ -58,6 +65,7 @@ const toggleSelectAll = () => {
   } else {
     selectedIds.value = contextMessages.value.map(msg => msg.id);
   }
+  emit('update:selected', [...selectedIds.value]);
 };
 
 const getPreview = (content) => {
@@ -71,8 +79,18 @@ const getSelectedMessages = () => {
   return contextMessages.value.filter(msg => selectedIds.value.includes(msg.id));
 };
 
+// 当外部selectedIds变化时同步内部状态
+watch(
+  () => props.selected,
+  (newSelected) => {
+    selectedIds.value = Array.isArray(newSelected) ? [...newSelected] : [];
+  },
+  { immediate: true }
+);
+
 defineExpose({
-  getSelectedMessages
+  getSelectedMessages,
+  toggleSelectAll
 });
 </script>
 

@@ -51,7 +51,26 @@
         </template>
       </div>
 
+      <!-- 上下文选择器区域 -->
+      <div 
+        class="context-selector-container"
+        v-if="showContextSelector"
+      >
+        <ContextSelector 
+          :messages="messages" 
+          v-model:selected="selectedContextIds"
+          ref="contextSelectorRef"
+        />
+      </div>
+
       <div class="input-actions">
+        <button 
+          class="context-btn"
+          @click="toggleContextSelector"
+          :disabled="chatStore.global.isSending"
+        >
+          {{ showContextSelector ? '关闭上下文' : '选择上下文' }}
+        </button>
         <button 
           class="image-upload-btn" 
           @click="triggerImageUpload"
@@ -86,10 +105,16 @@ import Sidebar from './Sidebar.vue';
 import InputArea from './InputArea.vue';
 import VirtualList from './VirtualList.vue';
 import MessageItem from './message/MessageItem.vue';
+import ContextSelector from './ContextSelector.vue'; // 导入上下文选择组件
 
 // 侧边栏状态
 const sidebarCollapsed = ref(false);
 const imageInput = ref(null);
+
+// 上下文选择相关状态
+const showContextSelector = ref(false);
+const selectedContextIds = ref([]);
+const contextSelectorRef = ref(null);
 
 // 会话管理
 const {
@@ -136,10 +161,60 @@ function getMessageState(msgId) {
   return currentMessageStates.value[msgId] || chatStore.messageStates[msgId] || 'success';
 }
 
-// 发送文本消息
 function handleSendText(content) {
-  sendMessage(content);
+  // 获取选中的上下文消息
+  let contextMessages = [];
+  if (contextSelectorRef.value) {
+    contextMessages = contextSelectorRef.value.getSelectedMessages();
+  }
+  
+  // 构建包含上下文的完整内容
+  let fullContent = content;
+  if (contextMessages.length > 0) {
+    const contextContent = contextMessages.map(msg => {
+      const role = msg.role === 'user' ? '用户' : 'AI';
+      // 处理不同类型消息的内容提取
+      let msgContent = '';
+      if (msg.type === 'text') {
+        msgContent = msg.content;
+      } else if (msg.type === 'image') {
+        msgContent = '[图片消息]';
+      } else if (msg.type === 'card' && typeof msg.content === 'object') {
+        msgContent = `[卡片: ${msg.content.title || '无标题'}]`;
+      }
+      return `[${role}]: ${msgContent}`;
+    }).join('\n');
+    
+    fullContent = `参考以下上下文进行回答:\n${contextContent}\n\n我的问题: ${content}`;
+  }
+  
+  sendMessage(fullContent);
   scrollToBottom();
+  
+  // 发送后关闭上下文选择器并清空选择
+  if (showContextSelector.value) {
+    toggleContextSelector();
+  }
+  selectedContextIds.value = [];
+}
+
+
+// 会话管理事件处理（修改原有方法，添加上下文重置逻辑）
+function handleNewChat() {
+  createNewSession();
+  scrollToBottom();
+  // 新建会话时关闭上下文选择器（新增）
+  showContextSelector.value = false;
+  selectedContextIds.value = [];
+}
+
+function handleSwitchSession(sessionId) {
+  switchSession(sessionId);
+  hydrateStreamProgress();
+  scrollToBottom();
+  // 切换会话时关闭上下文选择器（新增）
+  showContextSelector.value = false;
+  selectedContextIds.value = [];
 }
 
 // 图片上传处理
@@ -166,17 +241,17 @@ function handleImageSelected(event) {
   event.target.value = '';
 }
 
-// 会话管理事件处理
-function handleNewChat() {
-  createNewSession();
-  scrollToBottom();
+// 上下文选择器切换
+function toggleContextSelector() {
+  showContextSelector.value = !showContextSelector.value;
+  // 重置选择状态
+  if (!showContextSelector.value) {
+    selectedContextIds.value = [];
+  }
 }
 
-function handleSwitchSession(sessionId) {
-  switchSession(sessionId);
-  hydrateStreamProgress();
-  scrollToBottom();
-}
+// 实现处理方法
+// 选择同步由 v-model:selected 自动处理
 
 function handleDeleteSession(sessionId) {
   deleteSession(sessionId);
@@ -272,9 +347,39 @@ onMounted(() => {
   background-color: #fafafa;
 }
 
+/* 上下文选择器样式 */
+.context-selector-container {
+  margin-bottom: 10px;
+  max-height: 200px;
+  overflow: hidden;
+}
+
 .input-actions {
   display: flex;
   gap: 10px;
+}
+
+/* 上下文按钮样式 */
+.context-btn {
+  width: 120px;
+  background-color: #c540dd;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.context-btn:hover {
+  background-color: #ba6ddb;
+}
+
+.context-btn:disabled {
+  background-color: #d09bd9;
+  cursor: not-allowed;
 }
 
 .image-upload-btn {
