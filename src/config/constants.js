@@ -17,6 +17,9 @@ export const DEFAULT_MESSAGES = {
   RETRY_ERROR: '抱歉，回复仍失败，请稍后再试~'
 };
 
+// 控制模拟回复失败的概率（0.0 - 1.0），开发时可设置为 0 以禁用失败
+export const SIMULATE_FAILURE_RATE = 0;
+
 export const MESSAGE_TYPES = {
   TEXT: 'text',
   IMAGE: 'image',

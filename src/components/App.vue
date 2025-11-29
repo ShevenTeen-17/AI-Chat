@@ -12,7 +12,7 @@
     <div class="chat-container" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
       <header class="chat-header">
         <div class="chat-title">AI 对话</div>
-        <div class="chat-subtitle">轻量、私有、可扩展的聊天演示</div>
+        <div class="chat-subtitle">十七的专属AI助手</div>
       </header>
 
       <div class="chat-messages" ref="messageContainer">

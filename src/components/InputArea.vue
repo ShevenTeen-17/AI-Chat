@@ -114,7 +114,7 @@ const handleSend = () => {
 .input-container {
   display: flex;
   gap: 10px;
-  align-items: flex-end;
+  align-items: center;
   flex: 1;
 }
 
@@ -211,6 +211,8 @@ const handleSend = () => {
   min-width: 84px;
   box-shadow: 0 8px 20px var(--shadow);
   font-weight: 600;
+  align-self: center;
+  margin: 0;
 }
 
 .send-btn:disabled {

@@ -2,7 +2,7 @@ import { ref, computed } from 'vue';
 import { formatTime } from '../utils/formatter';
 import { getMockAnswer } from '../store/helpers';
 import { normalizeAiContent } from '../utils/messageUtils';
-import { DEFAULT_MESSAGES, STREAM_CONFIG } from '../config/constants';
+import { DEFAULT_MESSAGES, STREAM_CONFIG, SIMULATE_FAILURE_RATE } from '../config/constants';
 import { chatStore, chatActions } from '../store/chatStore';
 
 export function useMessages(sessions, currentSessionId, updateSessionMessages, updateSessionStates) {
@@ -92,7 +92,7 @@ export function useMessages(sessions, currentSessionId, updateSessionMessages, u
       const currentMsgs = messages.value.filter(m => m.id !== loadingMsg.id);
       updateSessionMessages(currentSessionId.value, currentMsgs);
       
-      const isReplySuccess = Math.random() > 0.3;
+      const isReplySuccess = Math.random() > SIMULATE_FAILURE_RATE;
       const aiContent = isReplySuccess 
         ? normalizeAiContent(getMockAnswer(content))
         : DEFAULT_MESSAGES.ERROR;
@@ -163,7 +163,7 @@ export function useMessages(sessions, currentSessionId, updateSessionMessages, u
       updateSessionMessages(currentSessionId.value, currentMsgs);
       
       // 生成AI回复
-      const isReplySuccess = Math.random() > 0.3;
+      const isReplySuccess = Math.random() > SIMULATE_FAILURE_RATE;
       const aiContent = isReplySuccess 
         ? normalizeAiContent(`我已收到你上传的图片。这是一张图片的描述信息。`)
         : DEFAULT_MESSAGES.ERROR;
@@ -199,7 +199,7 @@ export function useMessages(sessions, currentSessionId, updateSessionMessages, u
     chatActions.setIsSending(true);
 
     setTimeout(() => {
-      const isReplySuccess = Math.random() > 0.3;
+      const isReplySuccess = Math.random() > SIMULATE_FAILURE_RATE;
       const prompt = getPreviousUserContent(failedMsg.id);
       const newContent = isReplySuccess 
         ? normalizeAiContent(getMockAnswer(prompt || ''))
@@ -247,7 +247,7 @@ export function useMessages(sessions, currentSessionId, updateSessionMessages, u
     chatActions.setIsSending(true);
 
     setTimeout(() => {
-      const isReplySuccess = Math.random() > 0.3;
+      const isReplySuccess = Math.random() > SIMULATE_FAILURE_RATE;
       const newContent = isReplySuccess 
         ? normalizeAiContent(getMockAnswer(prompt))
         : DEFAULT_MESSAGES.ERROR;

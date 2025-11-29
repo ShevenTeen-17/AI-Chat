@@ -120,7 +120,7 @@ button:focus-visible {
 /* Theme toggle button (global) */
 .theme-toggle {
   position: fixed;
-  right: 18px;
+  left: 18px;
   bottom: 18px;
   z-index: 9999;
   width: 44px;
@@ -139,7 +139,7 @@ button:focus-visible {
 .theme-toggle:hover { transform: translateY(-2px); }
 
 @media (max-width: 800px) {
-  .theme-toggle { right: 12px; bottom: 12px; width: 40px; height: 40px; }
+  .theme-toggle { left: 12px; bottom: 12px; width: 40px; height: 40px; }
 }
 
 /* Ensure main chat messages area follows theme variables (override scoped styles if needed) */
@@ -148,7 +148,7 @@ button:focus-visible {
   box-shadow: 0 6px 18px var(--shadow) !important;
 }
 
-/* Also ensure chat container text colors follow theme */
-.chat-container, .chat-container * {
-  color: var(--text) !important;
+/* Ensure chat container text color follows theme (avoid overriding code/highlight styles) */
+.chat-container {
+  color: var(--text);
 }
