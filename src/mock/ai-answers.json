@@ -58,6 +58,30 @@
       "aiAnswer": "这是一段用于测试流式响应（打字机效果）的长文本内容。当文本内容较长时，流式渲染会逐字或逐词显示，模拟AI实时生成回答的过程。\n\n这段文本包含了换行、以及一些简单的格式，比如**加粗内容**和*斜体内容*，用于验证流式渲染过程中格式的动态生效效果。\n\n随着文本不断输出，你会看到内容一点点增加，直到完整显示所有内容。这种效果能提升用户体验，让等待过程更友好。"
     },
     {
+    "userQuestion": "我想了解Vue",
+    "aiAnswer": "Vue是一款渐进式JavaScript框架，专注于构建用户界面。你想了解Vue的哪个方面呢？比如Vue 3的新特性、组件开发或者状态管理？"
+  },
+  {
+    "userQuestion": "它的响应式原理是什么",
+    "aiAnswer": "Vue的响应式原理基于ES6的Proxy对象（Vue 3）或Object.defineProperty（Vue 2）。当你修改数据时，Vue会自动检测变化并更新DOM，无需手动操作DOM。"
+  },
+  {
+    "userQuestion": "能举个例子吗",
+    "aiAnswer": "当然可以！比如在Vue组件中定义data() { return { count: 0 } }，然后在模板中使用{{ count }}。当你调用this.count++时，模板中的count会自动更新，这就是响应式的体现。"
+  },
+  {
+    "userQuestion": "那React呢",
+    "aiAnswer": "React是Facebook开发的声明式UI库，采用虚拟DOM和组件化思想。与Vue相比，React更强调函数式编程和JSX语法，而Vue提供了更多开箱即用的功能（如双向绑定）。"
+  },
+  {
+    "userQuestion": "它们的虚拟DOM有什么区别",
+    "aiAnswer": "Vue的虚拟DOM在编译阶段会进行优化（如标记静态节点），而React的虚拟DOM默认需要手动使用React.memo等方式优化。此外，Vue 3的虚拟DOM采用了更高效的diff算法，性能表现更优。"
+  },
+  {
+    "userQuestion": "推荐用哪个",
+    "aiAnswer": "这取决于你的需求和团队习惯。如果你喜欢简洁的API和良好的文档，Vue是一个很好的选择；如果你需要构建大型应用或偏好函数式编程，React可能更适合。"
+  },
+    {
       "userQuestion": "默认回复",
       "aiAnswer": "抱歉，我暂时还没理解你的问题，你可以换个说法再问我~"
     }

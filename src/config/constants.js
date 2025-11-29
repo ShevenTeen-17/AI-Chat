@@ -16,3 +16,9 @@ export const DEFAULT_MESSAGES = {
   ERROR: '抱歉，回复失败，请点击重试~',
   RETRY_ERROR: '抱歉，回复仍失败，请稍后再试~'
 };
+
+export const MESSAGE_TYPES = {
+  TEXT: 'text',
+  IMAGE: 'image',
+  CARD: 'card'
+};

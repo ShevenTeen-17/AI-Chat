@@ -51,18 +51,34 @@
         </template>
       </div>
 
-      <InputArea 
-        :is-sending="chatStore.global.isSending"
-        @send="handleSend"
-      />
+      <div class="input-actions">
+        <button 
+          class="image-upload-btn" 
+          @click="triggerImageUpload"
+          :disabled="chatStore.global.isSending"
+        >
+          📷 上传图片
+        </button>
+        <InputArea 
+          :is-sending="chatStore.global.isSending"
+          @send="handleSendText"
+        />
+        <input 
+          type="file" 
+          ref="imageInput" 
+          class="image-input"
+          accept="image/*" 
+          @change="handleImageSelected"
+          hidden
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted, watch, computed } from 'vue';
+import { ref, nextTick, onMounted, watch } from 'vue';
 import { chatStore } from '../store/chatStore';
-import { formatTime } from '../utils/formatter';
 import { VIRTUAL_SCROLL_THRESHOLD } from '../config/constants';
 import { useSessions } from '../composables/useSessions';
 import { useMessages } from '../composables/useMessages';
@@ -73,12 +89,12 @@ import MessageItem from './message/MessageItem.vue';
 
 // 侧边栏状态
 const sidebarCollapsed = ref(false);
+const imageInput = ref(null);
 
 // 会话管理
 const {
   sessions,
   currentSessionId,
-  currentMessages,
   currentMessageStates,
   createNewSession,
   switchSession,
@@ -93,6 +109,7 @@ const {
   messages,
   streamProgress,
   handleSend: sendMessage,
+  handleSendImage: sendImageMessage,
   handleRetry,
   handleCopy,
   handleRegenerate,
@@ -106,7 +123,7 @@ const virtualListRef = ref(null);
 
 function scrollToBottom() {
   nextTick(() => {
-    if (virtualListRef.value && messages.value.length > VIRTUAL_SCROLL_THRESHOLD) {
+    if (virtualListRef.value && messages.length > VIRTUAL_SCROLL_THRESHOLD) {
       virtualListRef.value.scrollToBottom();
     } else if (messageContainer.value) {
       messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
@@ -119,10 +136,34 @@ function getMessageState(msgId) {
   return currentMessageStates.value[msgId] || chatStore.messageStates[msgId] || 'success';
 }
 
-// 发送消息（包装以添加滚动）
-function handleSend(content) {
+// 发送文本消息
+function handleSendText(content) {
   sendMessage(content);
   scrollToBottom();
+}
+
+// 图片上传处理
+function triggerImageUpload() {
+  imageInput.value?.click();
+}
+
+function handleImageSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    sendImageMessage({
+      url: e.target.result,
+      name: file.name,
+      size: file.size
+    });
+    scrollToBottom();
+  };
+  reader.readAsDataURL(file);
+  
+  // 重置input值，允许重复上传同一张图片
+  event.target.value = '';
 }
 
 // 会话管理事件处理
@@ -183,6 +224,7 @@ onMounted(() => {
 });
 </script>
 
+
 <style scoped>
 * {
   margin: 0;
@@ -190,6 +232,7 @@ onMounted(() => {
   box-sizing: border-box;
   font-family: 'Arial', sans-serif;
 }
+
 
 .app-wrapper {
   display: flex;
@@ -228,4 +271,37 @@ onMounted(() => {
   margin-bottom: 15px;
   background-color: #fafafa;
 }
+
+.input-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.image-upload-btn {
+  width: 100px;
+  background-color: #79c951ff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.image-upload-btn:hover {
+  background-color: #52b326;
+}
+
+.image-upload-btn:disabled {
+  background-color: #a9d98f;
+  cursor: not-allowed;
+}
+
+.image-input {
+  display: none;
+}
+
 </style>

@@ -1,6 +1,7 @@
 <template>
   <component 
-    :is="componentType" 
+    :is="getComponentByType" 
+    v-bind="componentProps"
     :content="cardContent"
     :state="state"
     :stream-progress="streamProgress"
@@ -13,11 +14,13 @@
   />
 </template>
 
+
 <script setup>
 import { computed } from 'vue';
 import TextMessage from './TextMessage.vue';
 import CardMessage from './CardMessage.vue';
-
+import ImageMessage from './ImageMessage.vue';
+import { MESSAGE_TYPES } from '../../config/constants';
 
 const props = defineProps({
   message: {
@@ -31,6 +34,44 @@ const props = defineProps({
   streamProgress: {
     type: Number,
     default: 100
+  }
+});
+
+const getComponentByType = computed(() => {
+  switch (props.message.type) {
+    case MESSAGE_TYPES.TEXT:
+      return TextMessage;
+    case MESSAGE_TYPES.CARD:
+      return CardMessage;
+    case MESSAGE_TYPES.IMAGE:
+      return ImageMessage;
+    default:
+      return TextMessage;
+  }
+});
+
+const componentProps = computed(() => {
+  const { message, state, streamProgress } = props;
+  
+  switch (message.type) {
+    case MESSAGE_TYPES.TEXT:
+      return {
+        content: message.content,
+        state,
+        streamProgress
+      };
+    case MESSAGE_TYPES.CARD:
+      return {
+        ...message.content,
+        state
+      };
+    case MESSAGE_TYPES.IMAGE:
+      return {
+        imageUrl: message.content,
+        state
+      };
+    default:
+      return { content: message.content };
   }
 });
 

@@ -153,4 +153,42 @@ defineEmits(['card-click', 'copy', 'regenerate', 'retry']);
   border-color: #409eff;
   color: #409eff;
 }
+
+/* 在现有样式基础上添加 */
+.message-item .image-message-container {
+  padding: 4px;
+}
+
+.user-message .image-message-container {
+  border-radius: 16px 16px 4px 16px;
+  background-color: #409eff;
+}
+
+.ai-message .image-message-container {
+  border-radius: 16px 16px 16px 4px;
+  background-color: #e0e0e0;
+}
+
+/* 新增图片消息样式 */
+.message-item .image-message-container {
+  padding: 8px;
+}
+
+.user-message .image-message-container {
+  background-color: #409eff;
+  border-radius: 16px 16px 4px 16px;
+}
+
+.ai-message .image-message-container {
+  background-color: #e0e0e0;
+  border-radius: 16px 16px 16px 4px;
+}
+
+/* 确保图片不超出容器 */
+.message-item img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
 </style>

@@ -53,11 +53,12 @@ export function useMessages(sessions, currentSessionId, updateSessionMessages, u
     return '';
   }
 
-  // 发送消息
+  // 发送文本消息
   function handleSend(content) {
     const userMsg = {
       id: Date.now(),
       role: 'user',
+      type: 'text',
       content: content,
       timestamp: formatTime(new Date())
     };
@@ -73,6 +74,7 @@ export function useMessages(sessions, currentSessionId, updateSessionMessages, u
     const loadingMsg = {
       id: Date.now() + 1,
       role: 'assistant',
+      type: 'text',
       content: DEFAULT_MESSAGES.LOADING,
       timestamp: formatTime(new Date())
     };
@@ -110,6 +112,80 @@ export function useMessages(sessions, currentSessionId, updateSessionMessages, u
         chatActions.setMessageState(aiReply.id, 'loading');
       }
       
+      createAiStream(aiReply, isReplySuccess);
+    }, 2000);
+  }
+
+  // 发送图片消息
+  function handleSendImage(imageData) {
+    if (!imageData || !imageData.url) return; // 验证图片数据
+    
+    const userMsg = {
+      id: Date.now(),
+      role: 'user',
+      type: 'image', // 图片类型
+      content: imageData.url, // 存储图片URL或Base64
+      timestamp: formatTime(new Date())
+    };
+    
+    // 更新消息列表
+    const currentMessages = [...messages.value, userMsg];
+    updateSessionMessages(currentSessionId.value, currentMessages);
+    
+    // 更新消息状态
+    const session = sessions.value.find(s => s.id === currentSessionId.value);
+    if (session) {
+      session.messageStates[userMsg.id] = 'success';
+      chatActions.setMessageState(userMsg.id, 'success');
+    }
+
+    // 显示AI加载状态
+    const loadingMsg = {
+      id: Date.now() + 1,
+      role: 'assistant',
+      type: 'text',
+      content: DEFAULT_MESSAGES.LOADING,
+      timestamp: formatTime(new Date())
+    };
+    const messagesWithLoading = [...currentMessages, loadingMsg];
+    updateSessionMessages(currentSessionId.value, messagesWithLoading);
+    
+    if (session) {
+      session.messageStates[loadingMsg.id] = 'loading';
+      chatActions.setMessageState(loadingMsg.id, 'loading');
+    }
+    chatActions.setIsSending(true);
+
+    // 模拟AI处理图片后的回复
+    setTimeout(() => {
+      // 移除加载消息
+      const currentMsgs = messages.value.filter(m => m.id !== loadingMsg.id);
+      updateSessionMessages(currentSessionId.value, currentMsgs);
+      
+      // 生成AI回复
+      const isReplySuccess = Math.random() > 0.3;
+      const aiContent = isReplySuccess 
+        ? normalizeAiContent(`我已收到你上传的图片。这是一张图片的描述信息。`)
+        : DEFAULT_MESSAGES.ERROR;
+
+      const aiReply = {
+        id: Date.now() + 2,
+        role: 'assistant',
+        type: typeof aiContent === 'object' && aiContent.type === 'card' ? 'card' : 'text',
+        content: aiContent,
+        timestamp: formatTime(new Date())
+      };
+      
+      // 更新最终消息列表
+      const finalMessages = [...currentMsgs, aiReply];
+      updateSessionMessages(currentSessionId.value, finalMessages);
+      
+      if (session) {
+        session.messageStates[aiReply.id] = 'loading';
+        chatActions.setMessageState(aiReply.id, 'loading');
+      }
+      
+      // 启动流式渲染
       createAiStream(aiReply, isReplySuccess);
     }, 2000);
   }
@@ -210,6 +286,7 @@ export function useMessages(sessions, currentSessionId, updateSessionMessages, u
       const welcome = {
         id: Date.now(),
         role: 'assistant',
+        type: 'text',
         content: DEFAULT_MESSAGES.WELCOME,
         timestamp: formatTime(new Date())
       };
@@ -223,6 +300,7 @@ export function useMessages(sessions, currentSessionId, updateSessionMessages, u
     currentMessageStates,
     streamProgress,
     handleSend,
+    handleSendImage,  // 新增图片消息处理方法
     handleRetry,
     handleCopy,
     handleRegenerate,
